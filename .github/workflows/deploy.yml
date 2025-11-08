@@ -8,7 +8,7 @@ on:
 jobs:
   build-and-deploy:
     # 2. 실행 환경: Ubuntu 최신 버전
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-arm64
 
     steps:
       # 3. 코드 다운로드 (Checkout)
