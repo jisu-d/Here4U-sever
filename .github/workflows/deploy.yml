@@ -66,11 +66,11 @@ jobs:
           # 서버에서 실행할 스크립트
           script: |
             # 1. docker-compose.prod.yml 파일이 있는 폴더로 이동
-            cd /Desktop/Here4U-sever
+            cd /home/jisu/Desktop/Here4U-sever
             
             # 2. Docker Hub에서 새 'app' 이미지 받기
-            docker-compose -f docker-compose.prod.yml pull app
+            docker compose -f docker-compose.prod.yml pull app
             
             # 3. DB(db)는 놔두고 'app' 서비스만 재시작
             #    --no-deps: 의존하는 db는 재시작하지 않음
-            docker-compose -f docker-compose.prod.yml up -d --no-deps app
+            docker compose -f docker-compose.prod.yml up -d --no-deps app
