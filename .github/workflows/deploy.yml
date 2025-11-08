@@ -25,6 +25,9 @@ jobs:
       # 5. Gradle 빌드 및 테스트
       # (Dockerfile에서 빌드하므로 이 단계는 테스트만 수행하거나 생략 가능)
       # (여기서는 GitHub Actions에서 먼저 테스트를 통과하는지 검사합니다)
+      - name: Grant execute permission to gradlew
+        run: chmod +x gradlew
+
       - name: Build and Test with Gradle
         run: ./gradlew build
 
