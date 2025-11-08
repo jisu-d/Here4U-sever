@@ -52,6 +52,7 @@ jobs:
           # ▼▼▼ 이미지 이름표(tag) 설정 ▼▼▼
           # [내_앱_이미지_이름]을 원하는 이름(예: my-java-app)으로 꼭 바꿔주세요.
           tags: ${{ secrets.DOCKER_USERNAME }}/here4u-server:latest
+          platforms: linux/arm64
           # ----------------------------------------------------
 
       # 8. SSH로 라즈베리파이 5 서버에 접속하여 배포
