@@ -8,7 +8,7 @@ on:
 jobs:
   build-and-deploy:
     # 2. 실행 환경: Ubuntu 최신 버전
-    runs-on: ubuntu-latest-arm64
+    runs-on: ubuntu-latest
 
     steps:
       # 3. 코드 다운로드 (Checkout)
@@ -38,6 +38,9 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       # 7. 도커 이미지 빌드 및 푸시
       # (arm64/amd64 교차 빌드를 위해 buildx 사용을 권장하지만,
