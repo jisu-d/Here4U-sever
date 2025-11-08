@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   app:
-    image: [내_도커허브_ID]/[내_앱_이미지_이름]:latest
+    image: jisu23/here4u-server:latest
     container_name: my-spring-app
     ports:
       - "8080:8080"
