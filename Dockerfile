@@ -13,6 +13,11 @@ COPY gradle ./gradle
 # 소스 코드 복사
 COPY src ./src
 
+# gradlew 스크립트 복사
+COPY gradlew ./
+# gradlew 스크립트에 실행 권한 부여
+RUN chmod +x ./gradlew
+
 # Gradle 빌드 실행 (테스트는 제외하여 빌드 속도 향상)
 # 실행 가능한 jar 파일을 생성합니다.
 RUN ./gradlew build -x test
