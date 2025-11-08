@@ -66,7 +66,7 @@ jobs:
           # 서버에서 실행할 스크립트
           script: |
             # 1. docker-compose.prod.yml 파일이 있는 폴더로 이동
-            cd /path/to/your/project 
+            cd /Desktop/Here4U-sever
             
             # 2. Docker Hub에서 새 'app' 이미지 받기
             docker-compose -f docker-compose.prod.yml pull app
