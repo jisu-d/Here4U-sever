@@ -1,38 +1,38 @@
-version: '3.8'
-
 services:
   app:
     image: jisu23/here4u-server:latest
     container_name: my-spring-app
     ports:
       - "8080:8080"
-#    depends_on:
-#      - db
+    depends_on:
+      - db
     environment:
       # .env 파일에서 변수를 읽어옵니다.
-#      - SPRING_DATASOURCE_URL=${SPRING_DB_URL}
-#      - SPRING_DATASOURCE_USERNAME=${SPRING_DB_USER}
-#      - SPRING_DATASOURCE_PASSWORD=${SPRING_DB_PASS}
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=none
+      - SPRING_DATASOURCE_URL=${SPRING_DB_URL}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DB_PASS}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
     networks:
       - app-network
 
-#  db:
-#    image: mariadb:10.11
-#    container_name: my-mariadb-db
-#    environment:
-#      # .env 파일에서 변수를 읽어옵니다.
-#      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
-#      - MARIADB_DATABASE=${MARIADB_DATABASE}
-#      - MARIADB_USER=${MARIADB_USER}
-#      - MARIADB_PASSWORD=${MARIADB_PASSWORD}
-#    volumes:
-#      - db-data:/var/lib/mysql
-#    networks:
-#      - app-network
-#
-#volumes:
-#  db-data:
+  db:
+    image: mariadb:10.11
+    container_name: my-mariadb-db
+    ports:
+      - "127.0.0.1:3306:3306"
+    environment:
+      # .env 파일에서 변수를 읽어옵니다.
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
+      - MARIADB_DATABASE=${MARIADB_DATABASE}
+      - MARIADB_USER=${MARIADB_USER}
+      - MARIADB_PASSWORD=${MARIADB_PASSWORD}
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - app-network
+
+volumes:
+  db-data:
 
 networks:
   app-network:
