@@ -40,7 +40,7 @@ WORKDIR /app
 
 # [수정 코드]
 # GitHub Actions 5단계에서 미리 빌드한 .jar 파일을 CI/CD 워크스페이스에서 바로 복사
-COPY build/libs/*.jar app.jar
+COPY build/libs/demo5-0.0.1-SNAPSHOT.jar app.jar
 
 # Spring Boot 앱이 사용하는 8080 포트 개방
 EXPOSE 8080
