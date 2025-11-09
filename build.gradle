@@ -22,8 +22,8 @@ repositories {
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web' // web api를 만들기 위해서 필요한거
 	developmentOnly 'org.springframework.boot:spring-boot-devtools' // 개발 툴
-    implementation 'org.mariadb.jdbc:mariadb-java-client' // MariaDB 드라이버
-    implementation 'org.springframework.boot:spring-boot-starter-jdbc' // JDBC 스타터
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    implementation 'org.mariadb.jdbc:mariadb-java-client'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
