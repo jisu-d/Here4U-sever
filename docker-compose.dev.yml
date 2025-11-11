@@ -17,6 +17,9 @@ services:
     # 4. 볼륨 마운트
     #    - 호스트의 현재 코드를 컨테이너의 /app으로 연결 (자동 리로드 핵심)
     #    - Gradle 캐시를 볼륨으로 유지해 빌드 속도 향상
+    env_file:
+      - .env
+
     volumes:
       - .:/app
       - gradle-cache:/home/gradle/.gradle

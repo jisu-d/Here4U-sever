@@ -17,16 +17,21 @@ java {
 
 repositories {
 	mavenCentral()
+
 }
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web' // web api를 만들기 위해서 필요한거
 	developmentOnly 'org.springframework.boot:spring-boot-devtools' // 개발 툴
+    implementation 'com.twilio.sdk:twilio:10.9.2' // twilio 사용
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
     implementation 'org.mariadb.jdbc:mariadb-java-client'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    implementation 'org.springframework.ai:spring-ai-starter-model-openai:1.0.3'
 }
+
 idea {
     module {
         outputDir = layout.buildDirectory.dir("classes/java/main").get().asFile
