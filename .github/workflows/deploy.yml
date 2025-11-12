@@ -28,6 +28,24 @@ jobs:
       - name: Grant execute permission to gradlew
         run: chmod +x gradlew
 
+      # ▼▼▼ 테스트를 실행하기 "전에" DB 컨테이너를 "GitHub Runner"에 띄웁니다 ▼▼▼
+      - name: Start MariaDB container for testing
+        run: docker compose -f docker-compose.prod.yml up -d db
+        env:
+           # 라즈베리파이의 .env와 동일한 내용으로 GitHub Secrets에 등록해야 합니다.
+           MARIADB_ROOT_PASSWORD: ${{ secrets.MARIADB_ROOT_PASSWORD }}
+           MARIADB_DATABASE: ${{ secrets.MARIADB_DATABASE }}
+           MARIADB_USER: ${{ secrets.MARIADB_USER }}
+           MARIADB_PASSWORD: ${{ secrets.MARIADB_PASSWORD }}
+           SPRING_DB_URL: ${{ secrets.SPRING_DATASOURCE_URL }}
+           SPRING_DB_USER: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
+           SPRING_DB_PASS: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+
+      - name: Wait for DB to be ready
+        run: |
+         echo "Waiting for MariaDB to start..."
+         sleep 15 # DB가 뜰 때까지 15초 대기
+
       - name: Build and Test with Gradle
         run: ./gradlew clean build
         env:
