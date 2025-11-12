@@ -39,4 +39,9 @@ public class TestOpenAiController {
 
         return ResponseEntity.ok("AI 답변: " + aiResponse);
     }
+
+    @PostMapping("/")
+    public String test() {
+        return "안녕";
+    }
 }
