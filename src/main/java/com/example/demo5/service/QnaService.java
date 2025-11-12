@@ -1,68 +1,106 @@
 package com.example.demo5.service;
 
-import com.example.demo5.repository.CallDataRepository;
+import com.example.demo5.dto.ChatMessage;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class QnaService {
 
-    // === 설문 질문 목록 (여기서 질문을 수정/추가할 수 있습니다) ===
-    private static final List<String> SURVEY_QUESTIONS = List.of(
-            "첫 번째 질문입니다. 당신의 이름은 무엇입니까?",
-            "두 번째 질문입니다. 가장 좋아하는 색깔은 무엇입니까?",
-            "세 번째 질문입니다. 오늘 기분은 어떠신가요?"
-    );
+    private static final int MAX_TURNS = 10;
+    private static final String HANGUP_KEYWORD = "종료";
+    private static final String FINAL_MESSAGE = "오늘 함께 이야기 나눌 수 있어서 의미 있는 시간이었습니다. 편안한 하루 보내시고, 다음에 또 뵙겠습니다.";
+    private static final String TIMEOUT_MESSAGE = "응답이 없어 통화를 종료합니다.";
+    private static final String HANGUP_MESSAGE = "요청에 따라 통화를 종료합니다.";
 
     private final TwilioService twilioService;
-    private final CallDataRepository callDataRepository;
+    private final OpenAiService openAiService;
 
-    public QnaService(TwilioService twilioService, CallDataRepository callDataRepository) {
+    // 데이터베이스 대신 인-메모리 맵을 사용하여 통화별 대화 내용 저장
+    private final Map<String, List<ChatMessage>> conversationStorage = new ConcurrentHashMap<>();
+
+    public QnaService(TwilioService twilioService, OpenAiService openAiService) {
         this.twilioService = twilioService;
-        this.callDataRepository = callDataRepository;
+        this.openAiService = openAiService;
     }
 
     /**
-     * 설문을 시작하는 TwiML을 생성합니다.
+     * AI 상담을 시작합니다.
+     * OpenAI를 호출하여 첫 번째 질문을 받고 TwiML을 생성합니다.
      */
-    public String startSurvey(String callSid, String ngrokUrl) {
-        callDataRepository.startSurvey(callSid);
-        String firstQuestion = SURVEY_QUESTIONS.get(0);
-        return twilioService.createGatherTwiML(firstQuestion, ngrokUrl);
+    public String startSurvey(String callSid, String baseUrl) {
+        // 하드코딩된 첫 인사말로 변경
+        String firstQuestion = "안녕하세요, AI 상담가입니다. 오늘 어떤 이야기를 나누고 싶으신가요?";
+        System.out.println("AI 질문 (1): " + firstQuestion);
+
+        // 대화 기록 초기화 및 AI의 첫 질문 저장
+        List<ChatMessage> history = new ArrayList<>();
+        history.add(new ChatMessage("AI", firstQuestion));
+        conversationStorage.put(callSid, history);
+
+        return twilioService.createGatherTwiML(firstQuestion, baseUrl);
     }
 
     /**
-     * 사용자의 답변을 처리하고 다음 행동을 결정하는 TwiML을 생성합니다.
+     * 사용자의 답변을 처리하고 AI의 다음 질문을 받거나 통화를 종료합니다.
      */
-    public String processSurveyResponse(String callSid, String speechResult, String ngrokUrl) {
-        // 1. 10초 타임아웃 또는 음성인식 실패 시
+    public String processSurveyResponse(String callSid, String speechResult, String baseUrl) {
+        // 1. 타임아웃 처리
         if (!StringUtils.hasText(speechResult)) {
-            return twilioService.createHangupTwiML("응답이 없어 통화를 종료합니다.");
+            System.out.println("응답 시간 초과로 통화를 종료합니다.");
+            printAndClearHistory(callSid);
+            return twilioService.createHangupTwiML(TIMEOUT_MESSAGE);
         }
 
-        // 2. 사용자가 "종료"라고 말했을 시
-        if (speechResult.contains("종료")) {
-            return twilioService.createHangupTwiML("설문을 중단하고 통화를 종료합니다.");
+        System.out.println("사용자 답변: " + speechResult);
+
+        // 2. 사용자의 종료 요청 처리
+        if (speechResult.contains(HANGUP_KEYWORD)) {
+            System.out.println("사용자의 요청으로 통화를 종료합니다.");
+            printAndClearHistory(callSid);
+            return twilioService.createHangupTwiML(HANGUP_MESSAGE);
         }
 
         // 3. 정상 답변 처리
-        int currentQuestionIndex = callDataRepository.getCurrentQuestionIndex(callSid);
-        String currentQuestion = SURVEY_QUESTIONS.get(currentQuestionIndex);
-        callDataRepository.saveAnswerAndProceed(callSid, currentQuestion, speechResult);
+        List<ChatMessage> history = conversationStorage.getOrDefault(callSid, new ArrayList<>());
+        history.add(new ChatMessage("User", speechResult));
 
-        // 4. 다음 질문이 있는지 확인
-        int nextQuestionIndex = callDataRepository.getCurrentQuestionIndex(callSid);
-        if (nextQuestionIndex < SURVEY_QUESTIONS.size()) {
-            // 다음 질문이 있으면, 다음 질문을 물어봄 (루프)
-            String nextQuestion = SURVEY_QUESTIONS.get(nextQuestionIndex);
-            return twilioService.createGatherTwiML(nextQuestion, ngrokUrl);
+        // 4. 대화 턴(turn) 수 계산 (사용자 답변 기준)
+        long userTurns = history.stream().filter(m -> "User".equalsIgnoreCase(m.speaker())).count();
+
+        if (userTurns < MAX_TURNS) {
+            // 5. 다음 질문 생성 (10턴 미만)
+            String nextQuestion = openAiService.getChatResponse(history);
+            System.out.println("AI 질문 (" + (userTurns + 1) + "): " + nextQuestion);
+            history.add(new ChatMessage("AI", nextQuestion));
+            conversationStorage.put(callSid, history); // 맵에 다시 저장
+            return twilioService.createGatherTwiML(nextQuestion, baseUrl);
         } else {
-            // 모든 질문이 끝났으면, 종료 메시지 후 통화 종료
-            System.out.println("최종 설문 결과: " + callDataRepository.getSurveyResults(callSid));
-            callDataRepository.clearCallData(callSid); // 저장된 데이터 삭제
-            return twilioService.createHangupTwiML("모든 설문이 완료되었습니다. 감사합니다.");
+            // 6. 마지막 인사 및 통화 종료 (10턴 도달)
+            System.out.println("10턴 대화가 완료되어 통화를 종료합니다.");
+            printAndClearHistory(callSid);
+            return twilioService.createHangupTwiML(FINAL_MESSAGE);
         }
+    }
+
+    /**
+     * 통화가 종료될 때 대화 기록을 출력하고 저장소에서 삭제합니다.
+     * @param callSid 통화 식별자
+     */
+    private void printAndClearHistory(String callSid) {
+        List<ChatMessage> history = conversationStorage.get(callSid);
+        if (history != null && !history.isEmpty()) {
+            System.out.println("\n--- 통화 종료: 대화 기록 (" + callSid + ") ---");
+            history.forEach(message ->
+                    System.out.println(message.speaker() + ": " + message.message())
+            );
+            System.out.println("--- 기록 종료 ---\n");
+        }
+        conversationStorage.remove(callSid);
     }
 }

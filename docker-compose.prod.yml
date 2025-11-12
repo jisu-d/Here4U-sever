@@ -12,6 +12,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=${SPRING_DB_USER}
       - SPRING_DATASOURCE_PASSWORD=${SPRING_DB_PASS}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_PROFILES_ACTIVE=prod # 배포용 application-prod.properties 사용
     networks:
       - app-network
 
