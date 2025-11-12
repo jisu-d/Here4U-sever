@@ -32,6 +32,7 @@ public class TwilioService {
 
     public void makeCall(String to, String ngrokUrl) {
         String voiceUrl = ngrokUrl + "/api/twilio/call/welcome";
+
         Call.creator(
                 new PhoneNumber(to),
                 new PhoneNumber(twilioPhoneNumber),
