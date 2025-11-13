@@ -48,7 +48,7 @@ public class TwilioService {
     public String createGatherTwiML(String message, String ngrokUrl) {
         String gatherUrl = ngrokUrl + "/api/twilio/call/handle-response";
 
-        Say say = new Say.Builder(message).voice(Say.Voice.POLLY_SEOYEON).build();
+        Say say = new Say.Builder(message).voice(Say.Voice.POLLY_SEOYEON_NEURAL).build();
 
         Gather gather = new Gather.Builder()
                 .inputs(Gather.Input.SPEECH)
@@ -65,7 +65,7 @@ public class TwilioService {
      * 메시지를 말하고, 통화를 종료하는 TwiML을 생성합니다.
      */
     public String createHangupTwiML(String message) {
-        Say say = new Say.Builder(message).voice(Say.Voice.POLLY_SEOYEON).build();
+        Say say = new Say.Builder(message).voice(Say.Voice.POLLY_SEOYEON_NEURAL).build();
         return new VoiceResponse.Builder().say(say).hangup(new Hangup.Builder().build()).build().toXml();
     }
 }
