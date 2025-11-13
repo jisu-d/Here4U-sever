@@ -33,12 +33,12 @@ public class KeywordAnalysisService {
     // This will now be the custom system prompt for keyword extraction
     private static final String KEYWORD_EXTRACTION_SYSTEM_PROMPT = """
             
-            당신은 [대화 의미 분석 엔진]입니다. 당신의 유일한 임무는 사용자(User)와 AI 간의 대화록을 정밀하게 분석하여, **사용자의 의도, 핵심 관심사, 주요 감정**을 드러내는 가장 중요한 키워드만을 추출하는 것입니다.
+            당신은 [대화 의미 분석 엔진]입니다. 당신의 유일한 임무는 사용자(User)의 대화록을 정밀하게 분석하여, **사용자의 의도, 핵심 관심사, 주요 감정**을 드러내는 가장 중요한 키워드만을 추출하는 것입니다.
             
             **[핵심 추출 원칙]**
             
             1.  **사용자 발언 최우선 (User-Centric):**
-                AI의 응답은 문맥 파악용으로만 사용합니다. 키워드 추출은 철저히 **사용자(User)의 발언**에 기반해야 합니다. 사용자가 무엇을 '질문'하고, 어떤 '문제'를 겪고 있으며, 무엇을 '중요하게' 생각하는지에만 집중하세요.
+                키워드 추출은 철저히 **사용자(User)의 발언**에 기반해야 합니다. 사용자가 무엇을 '질문'하고, 어떤 '문제'를 겪고 있으며, 무엇을 '중요하게' 생각하는지에만 집중하세요.
             
             2.  **주제 및 개체명 (Topic & Entity):**
                 대화의 핵심 주제어, 사용자가 언급하는 특정 기술, 서비스, 인물, 프로젝트 이름, 고유명사 (예: Spring Boot, 트윌리오 오류, 11205 에러, AI 에이전트)를 반드시 포착합니다.
@@ -54,15 +54,15 @@ public class KeywordAnalysisService {
             * **일반적인 대화:** '안녕하세요', '네', '아니요', '감사합니다', '알겠습니다', '맞아요'와 같은 인사, 동의, 감사 표현.
             * **간투사 및 필러:** '음...', '어...', '그...', '저기', '일단' 등 의미 없는 필러 단어.
             * **단순 문법 요소:** '은/는', '이/가', '을/를', '~입니다', '~했어요', '그리고', '그래서'와 같은 조사, 어미, 접속사.
-            * **AI의 발언:** AI가 설명한 내용이나 응답은 키워드 추출 대상이 아닙니다.
+            * **AI의 발언:** AI의 발언은 분석 대상이 아닙니다.
             * **음성사서함:** 단순 사용자의 핸드폰에서 응답한 말로 음성 사서함 같은 멘트는 포함하지 않아
             
             **[출력 형식]**
             
             * 추출된 모든 키워드를 쉼표(,)로 구분된 **단일 문자열**로 즉시 제공합니다.
             * 출력 예시 외에 어떠한 설명이나 부연 문장도 절대 추가하지 마세요.
-            * **예시:** \"키워드1, 키워드2, 키워드3\"
-            """;
+            * **예시:** "키워드1, 키워드2, 키워드3"
+    """;
 
     @Transactional
     public void analyzeAndSaveKeywords(String memberId, LocalDateTime analysisEndTime) {
@@ -95,10 +95,7 @@ public class KeywordAnalysisService {
                             .orElse("");
 
                     if (!firstUserMessage.isEmpty()) {
-                        aggregatedConversation.append("User: ").append(firstUserMessage).append("\n");
-                    }
-                    if (!firstAiResponse.isEmpty()) {
-                        aggregatedConversation.append("AI: ").append(firstAiResponse).append("\n");
+                        aggregatedConversation.append(firstUserMessage).append("\n");
                     }
                 } catch (JsonProcessingException e) {
                     log.error("Error parsing callData for callLogId: {}", callLog.getCallLogId(), e);
