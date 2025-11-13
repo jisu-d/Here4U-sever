@@ -30,14 +30,16 @@ public class TwilioService {
         Twilio.init(accountSid, authToken);
     }
 
-    public void makeCall(String to, String ngrokUrl) {
+    public String makeCall(String to, String ngrokUrl) {
         String voiceUrl = ngrokUrl + "/api/twilio/call/welcome";
 
-        Call.creator(
+        Call call = Call.creator(
                 new PhoneNumber(to),
                 new PhoneNumber(twilioPhoneNumber),
                 URI.create(voiceUrl)
         ).create();
+
+        return call.getSid();
     }
 
     /**

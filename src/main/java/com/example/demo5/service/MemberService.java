@@ -76,7 +76,8 @@ public class MemberService {
         String formattedPhoneNumber = formatPhoneNumber(member.getPhoneNumber());
 
         // 5. Twilio를 통해 전화 걸기
-        twilioService.makeCall(formattedPhoneNumber, ngrokUrl);
+        String callSid = twilioService.makeCall(formattedPhoneNumber, ngrokUrl);
+        savedCallLog.setCallSid(callSid); // CallSid 저장
 
         // 6. 응답 DTO 생성 및 반환
         return new CreateCallResponse(savedCallLog);

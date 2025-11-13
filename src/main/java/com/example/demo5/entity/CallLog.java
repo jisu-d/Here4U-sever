@@ -20,6 +20,9 @@ public class CallLog {
     @Column(name = "call_log_id")
     private Long callLogId;
 
+    @Column(name = "call_sid", unique = true)
+    private String callSid;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     private Member member;
@@ -38,6 +41,18 @@ public class CallLog {
 
     @Column(name = "call_data", columnDefinition = "json")
     private String callData;
+
+    public void setCallSid(String callSid) {
+        this.callSid = callSid;
+    }
+
+    public void setCallData(String callData) {
+        this.callData = callData;
+    }
+
+    public void setStatus(CallStatus status) {
+        this.status = status;
+    }
 
     @Builder
     public CallLog(Member member, CallType callType, CallStatus status) {
