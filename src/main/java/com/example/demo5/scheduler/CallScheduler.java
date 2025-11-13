@@ -3,6 +3,7 @@ package com.example.demo5.scheduler;
 import com.example.demo5.entity.CallSchedule;
 import com.example.demo5.repository.CallScheduleRepository;
 import com.example.demo5.service.MemberService;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,9 +26,14 @@ public class CallScheduler {
     @Value("${server.base-url}")
     private String baseUrl;
 
+    @PostConstruct
+    public void init() {
+        log.warn("[CallScheduler] 스케줄러가 성공적으로 생성되었습니다. 1분마다 스케줄 확인을 시작합니다.");
+    }
+
     @Scheduled(cron = "0 * * * * *") // 매 1분마다 실행
     public void checkSchedules() {
-        log.debug("스케줄 확인 시작...");
+        log.warn("========== 스케줄 확인 작업 시작 ==========");
         LocalTime now = LocalTime.now().truncatedTo(ChronoUnit.MINUTES);
         LocalDate today = LocalDate.now();
 
@@ -67,6 +73,6 @@ public class CallScheduler {
                 }
             }
         }
-        log.debug("스케줄 확인 종료.");
+        log.warn("========== 스케줄 확인 작업 종료 ==========");
     }
 }
