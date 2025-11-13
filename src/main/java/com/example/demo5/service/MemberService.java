@@ -4,6 +4,9 @@ import com.example.demo5.dto.call.CreateCallRequest;
 import com.example.demo5.dto.call.CreateCallResponse;
 import com.example.demo5.dto.member.CreateMemberRequest;
 import com.example.demo5.dto.member.MemberResponse;
+import com.example.demo5.dto.member.MemberKeywordResponse;
+import com.example.demo5.dto.member.MemberResponse;
+import com.example.demo5.dto.member.MemberStatusTagResponse;
 import com.example.demo5.dto.schedule.ScheduleRequest;
 import com.example.demo5.dto.schedule.CreateScheduleResponse;
 import com.example.demo5.dto.schedule.UpdateScheduleResponse;
@@ -49,8 +52,24 @@ public class MemberService {
         Member newMember = new Member();
         newMember.setMemberId(newMemberId);
         newMember.setPhoneNumber(request.getPhoneNumber());
+        newMember.setMemberKeyword("[]"); // 빈 배열로 초기화
+        newMember.setMemberStatus("{\"status_tag\": \"안전\"}"); // 기본 상태로 초기화
         Member savedMember = memberRepository.save(newMember);
         return new MemberResponse(savedMember);
+    }
+
+    @Transactional(readOnly = true)
+    public MemberKeywordResponse getMemberKeyword(String memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 회원을 찾을 수 없습니다: " + memberId));
+        return new MemberKeywordResponse(member);
+    }
+
+    @Transactional(readOnly = true)
+    public MemberStatusTagResponse getMemberStatusTag(String memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 회원을 찾을 수 없습니다: " + memberId));
+        return new MemberStatusTagResponse(member);
     }
 
     @Transactional
@@ -63,6 +82,8 @@ public class MemberService {
     @Async("taskExecutor")
     @Transactional
     public void initiateAutoCall(CallSchedule schedule, String baseUrl) {
+
+
         log.info("자동 전화 실행 (Thread: {}): scheduleId={}, memberId={}",
                 Thread.currentThread().getName(),
                 schedule.getScheduleId(),

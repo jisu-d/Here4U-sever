@@ -24,6 +24,12 @@ public class Member {
     @Column(name = "phone_number", nullable = false, unique = true, length = 20)
     private String phoneNumber;
 
+    @Column(name = "member_keyword", columnDefinition = "json")
+    private String memberKeyword;
+
+    @Column(name = "member_status", columnDefinition = "json")
+    private String memberStatus;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

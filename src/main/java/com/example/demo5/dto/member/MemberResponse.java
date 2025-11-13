@@ -6,11 +6,15 @@ import lombok.Getter;
 @Getter
 public class MemberResponse {
 
-    private String memberId; // <-- Long 에서 String으로 변경
+    private String memberId;
     private String phoneNumber;
+    private String memberKeyword;
+    private String memberStatus;
 
     public MemberResponse(Member member) {
         this.memberId = member.getMemberId();
         this.phoneNumber = member.getPhoneNumber();
+        this.memberKeyword = member.getMemberKeyword();
+        this.memberStatus = member.getMemberStatus();
     }
 }

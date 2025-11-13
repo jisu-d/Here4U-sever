@@ -3,7 +3,9 @@ package com.example.demo5.controller;
 import com.example.demo5.dto.call.CreateCallRequest;
 import com.example.demo5.dto.call.CreateCallResponse;
 import com.example.demo5.dto.member.CreateMemberRequest;
+import com.example.demo5.dto.member.MemberKeywordResponse;
 import com.example.demo5.dto.member.MemberResponse;
+import com.example.demo5.dto.member.MemberStatusTagResponse;
 import com.example.demo5.dto.schedule.ScheduleRequest;
 import com.example.demo5.dto.schedule.CreateScheduleResponse;
 import com.example.demo5.dto.schedule.UpdateScheduleResponse;
@@ -36,6 +38,30 @@ public class MemberController {
 
         // 201 Created 상태 코드와 함께 생성된 회원 정보를 반환
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * 5. 회원 관심 키워드 조회 API
+     * [GET] /api/members/{memberId}/keyword
+     */
+    @GetMapping("/{memberId}/keyword")
+    public ResponseEntity<MemberKeywordResponse> getMemberKeyword(
+            @PathVariable String memberId
+    ) {
+        MemberKeywordResponse response = memberService.getMemberKeyword(memberId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 6. 회원 상태 태그 조회 API
+     * [GET] /api/members/{memberId}/status
+     */
+    @GetMapping("/{memberId}/status")
+    public ResponseEntity<MemberStatusTagResponse> getMemberStatusTag(
+            @PathVariable String memberId
+    ) {
+        MemberStatusTagResponse response = memberService.getMemberStatusTag(memberId);
+        return ResponseEntity.ok(response);
     }
 
     /**
