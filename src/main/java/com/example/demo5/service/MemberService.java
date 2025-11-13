@@ -15,12 +15,15 @@ import com.example.demo5.repository.CallScheduleRepository;
 import com.example.demo5.repository.MemberRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom; // 랜덤 ID 생성용
 import java.util.Base64; // 랜덤 ID 생성용
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MemberService {
@@ -35,133 +38,99 @@ public class MemberService {
 
     @Transactional
     public MemberResponse createMember(CreateMemberRequest request) {
-
-        // 1. 전화번호 중복 검사
         if (memberRepository.existsByPhoneNumber(request.getPhoneNumber())) {
             throw new IllegalArgumentException("이미 등록된 전화번호입니다.");
         }
-
-        // 2. 랜덤 ID 생성 및 중복 확인 (추가된 로직)
         String newMemberId;
         do {
-            newMemberId = generateRandomId(5); // 5자리 랜덤 ID 생성
-        } while (memberRepository.existsById(newMemberId)); // DB에 ID가 이미 있는지 확인
+            newMemberId = generateRandomId(5);
+        } while (memberRepository.existsById(newMemberId));
 
-        // 3. Entity 생성
         Member newMember = new Member();
-        newMember.setMemberId(newMemberId); // <-- 생성한 ID를 직접 설정
+        newMember.setMemberId(newMemberId);
         newMember.setPhoneNumber(request.getPhoneNumber());
-
-        // 4. DB에 저장
         Member savedMember = memberRepository.save(newMember);
-
-        // 5. DTO로 변환하여 반환
         return new MemberResponse(savedMember);
     }
 
     @Transactional
-    public CreateCallResponse initiateManualCall(String memberId, CreateCallRequest request, String ngrokUrl) {
-        // 1. 회원 조회
+    public CreateCallResponse initiateManualCall(String memberId, CreateCallRequest request, String baseUrl) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 ID의 회원을 찾을 수 없습니다: " + memberId));
+        return initiateCall(member, CallLog.CallType.MANUAL, baseUrl);
+    }
 
-        // 2. 통화 유형 확인
-        if (!"MANUAL".equalsIgnoreCase(request.getType())) {
-            throw new IllegalArgumentException("지원하지 않는 통화 유형입니다.");
-        }
+    @Async("taskExecutor")
+    @Transactional
+    public void initiateAutoCall(CallSchedule schedule, String baseUrl) {
+        log.info("자동 전화 실행 (Thread: {}): scheduleId={}, memberId={}",
+                Thread.currentThread().getName(),
+                schedule.getScheduleId(),
+                schedule.getMember().getMemberId());
+        initiateCall(schedule.getMember(), CallLog.CallType.AUTO, baseUrl);
+    }
 
-        // 3. 통화 기록(CallLog) 생성 및 저장
+    private CreateCallResponse initiateCall(Member member, CallLog.CallType callType, String baseUrl) {
         CallLog callLog = CallLog.builder()
                 .member(member)
-                .callType(CallLog.CallType.MANUAL)
+                .callType(callType)
                 .status(CallLog.CallStatus.QUEUED)
                 .build();
         CallLog savedCallLog = callLogRepository.save(callLog);
 
-        // 4. 전화번호 형식 변환 (e.g., 010-1234-5678 -> +821012345678)
         String formattedPhoneNumber = formatPhoneNumber(member.getPhoneNumber());
+        String callSid = twilioService.makeCall(formattedPhoneNumber, baseUrl);
+        savedCallLog.setCallSid(callSid);
+        callLogRepository.save(savedCallLog); // callSid 저장
 
-        // 5. Twilio를 통해 전화 걸기
-        String callSid = twilioService.makeCall(formattedPhoneNumber, ngrokUrl);
-        savedCallLog.setCallSid(callSid); // CallSid 저장
-
-        // 6. 응답 DTO 생성 및 반환
         return new CreateCallResponse(savedCallLog);
     }
 
     @Transactional
     public CreateScheduleResponse createCallSchedule(String memberId, ScheduleRequest request) {
-        // 1. 회원 조회
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 ID의 회원을 찾을 수 없습니다: " + memberId));
 
-        // 2. 스케줄 엔티티 생성
         CallSchedule schedule = CallSchedule.builder()
                 .member(member)
                 .startDate(request.getStartDate())
                 .frequency(request.getFrequency())
                 .callTime(request.getCallTime())
-                .isActive(request.getIsActive() != null ? request.getIsActive() : true) // isActive 처리
+                .isActive(request.getIsActive() != null ? request.getIsActive() : true)
                 .build();
-
-        // 3. DB에 저장
         CallSchedule savedSchedule = callScheduleRepository.save(schedule);
-
-        // 4. DTO로 변환하여 반환
         return new CreateScheduleResponse(savedSchedule);
-    }
-
-    /**
-     * 대한민국 전화번호를 E.164 형식으로 변환하는 헬퍼 메서드
-     * @param phoneNumber (e.g., "010-1234-5678")
-     * @return E.164 formatted phone number (e.g., "+821012345678")
-     */
-    private String formatPhoneNumber(String phoneNumber) {
-        String digitsOnly = phoneNumber.replaceAll("[^0-9]", "");
-        if (digitsOnly.startsWith("0")) {
-            return "+82" + digitsOnly.substring(1);
-        }
-        // 이미 국제 형식이거나 다른 형식일 경우 일단 그대로 반환 (또는 추가적인 예외 처리)
-        return digitsOnly;
-    }
-
-
-    /**
-     * 랜덤 영문/숫자 ID 생성 헬퍼 메서드
-     * @param length ID 길이 (5자리)
-     * @return 랜덤 ID 문자열
-     */
-    private String generateRandomId(int length) {
-        // Apache Commons Lang3의 RandomStringUtils.randomAlphanumeric(5)를 쓰는 게 가장 편합니다.
-        // 라이브러리 없이 구현하려면 아래 방법을 사용합니다.
-
-        // 5자리를 만들기 위해 4바이트 랜덤 데이터 생성
-        byte[] buffer = new byte[4]; // 4바이트면 5~6자리 Base64 문자열이 나옵니다.
-        random.nextBytes(buffer);
-        // Base64 URL-safe 문자로 인코딩 후 5자리만 자르기
-        return encoder.encodeToString(buffer).substring(0, length);
     }
 
     @Transactional
     public UpdateScheduleResponse updateCallSchedule(String memberId, Long scheduleId, ScheduleRequest request) {
-        // 1. 스케줄 조회
         CallSchedule schedule = callScheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 ID의 스케줄을 찾을 수 없습니다: " + scheduleId));
 
-        // 2. 소유권 확인
         if (!schedule.getMember().getMemberId().equals(memberId)) {
             throw new IllegalStateException("해당 스케줄을 변경할 권한이 없습니다.");
         }
 
-        // 3. 엔티티 업데이트
         schedule.update(
                 request.getStartDate(),
                 request.getFrequency(),
                 request.getCallTime(),
                 request.getIsActive()
         );
-
-        // 4. 저장 및 DTO 변환 후 반환
         return new UpdateScheduleResponse(callScheduleRepository.save(schedule));
+    }
+
+    private String formatPhoneNumber(String phoneNumber) {
+        String digitsOnly = phoneNumber.replaceAll("[^0-9]", "");
+        if (digitsOnly.startsWith("0")) {
+            return "+82" + digitsOnly.substring(1);
+        }
+        return digitsOnly;
+    }
+
+    private String generateRandomId(int length) {
+        byte[] buffer = new byte[4];
+        random.nextBytes(buffer);
+        return encoder.encodeToString(buffer).substring(0, length);
     }
 }
