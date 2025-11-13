@@ -4,6 +4,8 @@ import com.example.demo5.dto.call.CreateCallRequest;
 import com.example.demo5.dto.call.CreateCallResponse;
 import com.example.demo5.dto.member.CreateMemberRequest;
 import com.example.demo5.dto.member.MemberResponse;
+import com.example.demo5.dto.schedule.ScheduleRequest;
+import com.example.demo5.dto.schedule.CreateScheduleResponse;
 import com.example.demo5.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,5 +48,24 @@ public class MemberController {
     ) {
         CreateCallResponse response = memberService.initiateManualCall(memberId, request, baseUrl);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 3. 자동 전화 스케줄 등록 API
+     * [POST] /api/members/{memberId}/schedules
+     *  {
+     *     "startDate": "2025-11-15",
+     *     "frequency": "MONTHLY",
+     *     "callTime": "19:00:00",
+     *     "isActive": true
+     * }
+     */
+    @PostMapping("/{memberId}/schedules")
+    public ResponseEntity<CreateScheduleResponse> addSchedule(
+            @PathVariable String memberId,
+            @RequestBody ScheduleRequest request
+    ) {
+        CreateScheduleResponse response = memberService.createCallSchedule(memberId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

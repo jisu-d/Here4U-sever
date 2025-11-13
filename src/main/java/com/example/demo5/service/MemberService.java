@@ -4,9 +4,13 @@ import com.example.demo5.dto.call.CreateCallRequest;
 import com.example.demo5.dto.call.CreateCallResponse;
 import com.example.demo5.dto.member.CreateMemberRequest;
 import com.example.demo5.dto.member.MemberResponse;
+import com.example.demo5.dto.schedule.ScheduleRequest;
+import com.example.demo5.dto.schedule.CreateScheduleResponse;
 import com.example.demo5.entity.CallLog;
+import com.example.demo5.entity.CallSchedule;
 import com.example.demo5.entity.Member;
 import com.example.demo5.repository.CallLogRepository;
+import com.example.demo5.repository.CallScheduleRepository;
 import com.example.demo5.repository.MemberRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +26,7 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
     private final CallLogRepository callLogRepository;
+    private final CallScheduleRepository callScheduleRepository;
     private final TwilioService twilioService;
     private static final SecureRandom random = new SecureRandom();
     private static final Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
@@ -81,6 +86,28 @@ public class MemberService {
 
         // 6. 응답 DTO 생성 및 반환
         return new CreateCallResponse(savedCallLog);
+    }
+
+    @Transactional
+    public CreateScheduleResponse createCallSchedule(String memberId, ScheduleRequest request) {
+        // 1. 회원 조회
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 회원을 찾을 수 없습니다: " + memberId));
+
+        // 2. 스케줄 엔티티 생성
+        CallSchedule schedule = CallSchedule.builder()
+                .member(member)
+                .startDate(request.getStartDate())
+                .frequency(request.getFrequency())
+                .callTime(request.getCallTime())
+                .isActive(request.getIsActive() != null ? request.getIsActive() : true) // isActive 처리
+                .build();
+
+        // 3. DB에 저장
+        CallSchedule savedSchedule = callScheduleRepository.save(schedule);
+
+        // 4. DTO로 변환하여 반환
+        return new CreateScheduleResponse(savedSchedule);
     }
 
     /**
