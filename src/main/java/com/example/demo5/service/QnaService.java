@@ -29,18 +29,20 @@ public class QnaService {
     private final OpenAiService openAiService;
     private final CallLogRepository callLogRepository;
     private final ObjectMapper objectMapper;
-    private final KeywordAnalysisService keywordAnalysisService; // New injection
+    private final KeywordAnalysisService keywordAnalysisService;
+    private final MemberStatusAnalysisService memberStatusAnalysisService; // New injection
 
 
     // 데이터베이스 대신 인-메모리 맵을 사용하여 통화별 대화 내용 저장
     private final Map<String, List<ChatMessage>> conversationStorage = new ConcurrentHashMap<>();
 
-    public QnaService(TwilioService twilioService, OpenAiService openAiService, CallLogRepository callLogRepository, ObjectMapper objectMapper, KeywordAnalysisService keywordAnalysisService) {
+    public QnaService(TwilioService twilioService, OpenAiService openAiService, CallLogRepository callLogRepository, ObjectMapper objectMapper, KeywordAnalysisService keywordAnalysisService, MemberStatusAnalysisService memberStatusAnalysisService) {
         this.twilioService = twilioService;
         this.openAiService = openAiService;
         this.callLogRepository = callLogRepository;
         this.objectMapper = objectMapper;
-        this.keywordAnalysisService = keywordAnalysisService; // Assign new service
+        this.keywordAnalysisService = keywordAnalysisService;
+        this.memberStatusAnalysisService = memberStatusAnalysisService; // Assign new service
     }
 
     /**
@@ -137,6 +139,9 @@ public class QnaService {
 
                 // Trigger keyword analysis
                 keywordAnalysisService.analyzeAndSaveKeywords(callLog.getMember().getMemberId(), callLog.getRequestedAt());
+
+                // Trigger member status analysis
+                memberStatusAnalysisService.analyzeAndSaveMemberStatus(callLog.getMember().getMemberId(), callLog.getRequestedAt());
 
             } catch (JsonProcessingException e) {
                 log.error("Failed to serialize call data for CallSid: {}", callSid, e);
