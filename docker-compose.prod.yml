@@ -9,6 +9,8 @@ services:
     depends_on:
       - db
     environment:
+      - JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Seoul  # JVM 시간대를 한국으로 설정
+      - TZ=Asia/Seoul # 컨테이너 OS 시간대를 한국으로 설정
       # .env 파일에서 변수를 읽어옵니다.
       - SPRING_DATASOURCE_URL=${SPRING_DB_URL}
       - SPRING_DATASOURCE_USERNAME=${SPRING_DB_USER}
