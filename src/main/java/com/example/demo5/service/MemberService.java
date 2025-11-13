@@ -5,7 +5,6 @@ import com.example.demo5.dto.call.CreateCallResponse;
 import com.example.demo5.dto.member.CreateMemberRequest;
 import com.example.demo5.dto.member.MemberResponse;
 import com.example.demo5.dto.member.MemberKeywordResponse;
-import com.example.demo5.dto.member.MemberResponse;
 import com.example.demo5.dto.member.MemberStatusTagResponse;
 import com.example.demo5.dto.schedule.ScheduleRequest;
 import com.example.demo5.dto.schedule.CreateScheduleResponse;
@@ -13,9 +12,13 @@ import com.example.demo5.dto.schedule.UpdateScheduleResponse;
 import com.example.demo5.entity.CallLog;
 import com.example.demo5.entity.CallSchedule;
 import com.example.demo5.entity.Member;
+import com.example.demo5.entity.MemberKeyword; // New import
+import com.example.demo5.entity.MemberStatus; // New import
 import com.example.demo5.repository.CallLogRepository;
 import com.example.demo5.repository.CallScheduleRepository;
+import com.example.demo5.repository.MemberKeywordRepository; // New import
 import com.example.demo5.repository.MemberRepository;
+import com.example.demo5.repository.MemberStatusRepository; // New import
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +35,8 @@ import java.util.Base64; // 랜덤 ID 생성용
 public class MemberService {
 
     private final MemberRepository memberRepository;
+    private final MemberKeywordRepository memberKeywordRepository; // New injection
+    private final MemberStatusRepository memberStatusRepository; // New injection
     private final CallLogRepository callLogRepository;
     private final CallScheduleRepository callScheduleRepository;
     private final TwilioService twilioService;
@@ -52,24 +57,35 @@ public class MemberService {
         Member newMember = new Member();
         newMember.setMemberId(newMemberId);
         newMember.setPhoneNumber(request.getPhoneNumber());
-        newMember.setMemberKeyword("[]"); // 빈 배열로 초기화
-        newMember.setMemberStatus("{\"status_tag\": \"안전\"}"); // 기본 상태로 초기화
         Member savedMember = memberRepository.save(newMember);
+
+        // Create and save initial MemberKeyword
+        MemberKeyword memberKeyword = new MemberKeyword();
+        memberKeyword.setMember(savedMember);
+        memberKeyword.setKeyword("[]"); // Initial empty JSON array
+        memberKeywordRepository.save(memberKeyword);
+
+        // Create and save initial MemberStatus
+        MemberStatus memberStatus = new MemberStatus();
+        memberStatus.setMember(savedMember);
+        memberStatus.setStatusTag("안전"); // Initial status tag
+        memberStatusRepository.save(memberStatus);
+
         return new MemberResponse(savedMember);
     }
 
     @Transactional(readOnly = true)
     public MemberKeywordResponse getMemberKeyword(String memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 회원을 찾을 수 없습니다: " + memberId));
-        return new MemberKeywordResponse(member);
+        MemberKeyword memberKeyword = memberKeywordRepository.findByMember_MemberId(memberId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 회원 키워드를 찾을 수 없습니다: " + memberId));
+        return new MemberKeywordResponse(memberKeyword);
     }
 
     @Transactional(readOnly = true)
     public MemberStatusTagResponse getMemberStatusTag(String memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 회원을 찾을 수 없습니다: " + memberId));
-        return new MemberStatusTagResponse(member);
+        MemberStatus memberStatus = memberStatusRepository.findByMember_MemberId(memberId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 회원 상태를 찾을 수 없습니다: " + memberId));
+        return new MemberStatusTagResponse(memberStatus);
     }
 
     @Transactional

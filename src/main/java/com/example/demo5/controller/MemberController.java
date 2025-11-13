@@ -41,30 +41,6 @@ public class MemberController {
     }
 
     /**
-     * 5. 회원 관심 키워드 조회 API
-     * [GET] /api/members/{memberId}/keyword
-     */
-    @GetMapping("/{memberId}/keyword")
-    public ResponseEntity<MemberKeywordResponse> getMemberKeyword(
-            @PathVariable String memberId
-    ) {
-        MemberKeywordResponse response = memberService.getMemberKeyword(memberId);
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * 6. 회원 상태 태그 조회 API
-     * [GET] /api/members/{memberId}/status
-     */
-    @GetMapping("/{memberId}/status")
-    public ResponseEntity<MemberStatusTagResponse> getMemberStatusTag(
-            @PathVariable String memberId
-    ) {
-        MemberStatusTagResponse response = memberService.getMemberStatusTag(memberId);
-        return ResponseEntity.ok(response);
-    }
-
-    /**
      * 2. 수동 전화 걸기 API
      * [POST] /api/members/{memberId}/calls
      */
@@ -107,6 +83,30 @@ public class MemberController {
             @RequestBody ScheduleRequest request
     ) {
         UpdateScheduleResponse response = memberService.updateCallSchedule(memberId, scheduleId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 5. 회원 관심 키워드 조회 API
+     * [GET] /api/members/{memberId}/keyword
+     */
+    @GetMapping("/{memberId}/keyword")
+    public ResponseEntity<MemberKeywordResponse> getMemberKeyword(
+            @PathVariable String memberId
+    ) {
+        MemberKeywordResponse response = memberService.getMemberKeyword(memberId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 6. 회원 상태 태그 조회 API
+     * [GET] /api/members/{memberId}/status
+     */
+    @GetMapping("/{memberId}/status")
+    public ResponseEntity<MemberStatusTagResponse> getMemberStatusTag(
+            @PathVariable String memberId
+    ) {
+        MemberStatusTagResponse response = memberService.getMemberStatusTag(memberId);
         return ResponseEntity.ok(response);
     }
 }

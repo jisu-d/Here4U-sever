@@ -19,16 +19,8 @@ public class Member {
     @Column(name = "member_id", length = 10) // <-- DB 스키마와 동일하게 길이 지정
     private String memberId; // <-- Long 에서 String으로 변경
 
-    // @GeneratedValue(strategy = GenerationType.IDENTITY) // <-- 이 줄 삭제!
-
     @Column(name = "phone_number", nullable = false, unique = true, length = 20)
     private String phoneNumber;
-
-    @Column(name = "member_keyword", columnDefinition = "json")
-    private String memberKeyword;
-
-    @Column(name = "member_status", columnDefinition = "json")
-    private String memberStatus;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
