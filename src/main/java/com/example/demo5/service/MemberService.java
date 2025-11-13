@@ -6,6 +6,7 @@ import com.example.demo5.dto.member.CreateMemberRequest;
 import com.example.demo5.dto.member.MemberResponse;
 import com.example.demo5.dto.schedule.ScheduleRequest;
 import com.example.demo5.dto.schedule.CreateScheduleResponse;
+import com.example.demo5.dto.schedule.UpdateScheduleResponse;
 import com.example.demo5.entity.CallLog;
 import com.example.demo5.entity.CallSchedule;
 import com.example.demo5.entity.Member;
@@ -139,5 +140,28 @@ public class MemberService {
         random.nextBytes(buffer);
         // Base64 URL-safe 문자로 인코딩 후 5자리만 자르기
         return encoder.encodeToString(buffer).substring(0, length);
+    }
+
+    @Transactional
+    public UpdateScheduleResponse updateCallSchedule(String memberId, Long scheduleId, ScheduleRequest request) {
+        // 1. 스케줄 조회
+        CallSchedule schedule = callScheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 스케줄을 찾을 수 없습니다: " + scheduleId));
+
+        // 2. 소유권 확인
+        if (!schedule.getMember().getMemberId().equals(memberId)) {
+            throw new IllegalStateException("해당 스케줄을 변경할 권한이 없습니다.");
+        }
+
+        // 3. 엔티티 업데이트
+        schedule.update(
+                request.getStartDate(),
+                request.getFrequency(),
+                request.getCallTime(),
+                request.getIsActive()
+        );
+
+        // 4. 저장 및 DTO 변환 후 반환
+        return new UpdateScheduleResponse(callScheduleRepository.save(schedule));
     }
 }

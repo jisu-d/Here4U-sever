@@ -6,6 +6,7 @@ import com.example.demo5.dto.member.CreateMemberRequest;
 import com.example.demo5.dto.member.MemberResponse;
 import com.example.demo5.dto.schedule.ScheduleRequest;
 import com.example.demo5.dto.schedule.CreateScheduleResponse;
+import com.example.demo5.dto.schedule.UpdateScheduleResponse;
 import com.example.demo5.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -67,5 +68,19 @@ public class MemberController {
     ) {
         CreateScheduleResponse response = memberService.createCallSchedule(memberId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * 4. 자동 전화 스케줄 변경 API
+     * [PATCH] /api/members/{memberId}/schedules/{scheduleId}
+     */
+    @PatchMapping("/{memberId}/schedules/{scheduleId}")
+    public ResponseEntity<UpdateScheduleResponse> updateSchedule(
+            @PathVariable String memberId,
+            @PathVariable Long scheduleId,
+            @RequestBody ScheduleRequest request
+    ) {
+        UpdateScheduleResponse response = memberService.updateCallSchedule(memberId, scheduleId, request);
+        return ResponseEntity.ok(response);
     }
 }
