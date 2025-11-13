@@ -64,27 +64,33 @@ public class QnaService {
     public String processSurveyResponse(String callSid, String speechResult, String baseUrl) {
         // 1. 타임아웃 처리
         if (!StringUtils.hasText(speechResult)) {
-            log.info("Call timed out (CallSid: {}).");
-            finalizeAndSaveCallLog(callSid, CallLog.CallStatus.FAILED);
+            log.info("Call timed out (CallSid: {}).", callSid);
+            finalizeAndSaveCallLog(callSid, CallLog.CallStatus.FAILED, "응답 시간 초과");
             return twilioService.createHangupTwiML(TIMEOUT_MESSAGE);
         }
 
         log.info("User Response (CallSid: {}): {}", callSid, speechResult);
-
-        // 2. 사용자의 종료 요청 처리
-        if (speechResult.contains(HANGUP_KEYWORD)) {
-            log.info("User requested to end the call (CallSid: {}).");
-            finalizeAndSaveCallLog(callSid, CallLog.CallStatus.COMPLETED);
-            return twilioService.createHangupTwiML(HANGUP_MESSAGE);
-        }
-
-        // 3. 정상 답변 처리
         List<ChatMessage> history = conversationStorage.getOrDefault(callSid, new ArrayList<>());
         history.add(new ChatMessage("User", speechResult));
 
-        // 4. 대화 턴(turn) 수 계산 (사용자 답변 기준)
+        // 2. 음성 사서함 감지 (첫 응답인 경우)
         long userTurns = history.stream().filter(m -> "User".equalsIgnoreCase(m.speaker())).count();
+        if (userTurns == 1) {
+            if (speechResult.contains("음성사서함") || speechResult.contains("소리샘") || speechResult.contains("남겨주세요")) {
+                log.info("Voicemail detected. Ending call (CallSid: {}).", callSid);
+                finalizeAndSaveCallLog(callSid, CallLog.CallStatus.FAILED, "음성 사서함 감지");
+                return twilioService.createHangupTwiML("음성 사서함이 감지되어 통화를 종료합니다.");
+            }
+        }
 
+        // 3. 사용자의 종료 요청 처리
+        if (speechResult.contains(HANGUP_KEYWORD)) {
+            log.info("User requested to end the call (CallSid: {}).", callSid);
+            finalizeAndSaveCallLog(callSid, CallLog.CallStatus.COMPLETED, "사용자 요청");
+            return twilioService.createHangupTwiML(HANGUP_MESSAGE);
+        }
+
+        // 4. 정상 답변 처리
         if (userTurns < MAX_TURNS) {
             // 5. 다음 질문 생성 (10턴 미만)
             String nextQuestion = openAiService.getChatResponse(history);
@@ -94,8 +100,8 @@ public class QnaService {
             return twilioService.createGatherTwiML(nextQuestion, baseUrl);
         } else {
             // 6. 마지막 인사 및 통화 종료 (10턴 도달)
-            log.info("Max turns reached. Ending call (CallSid: {}).");
-            finalizeAndSaveCallLog(callSid, CallLog.CallStatus.COMPLETED);
+            log.info("Max turns reached. Ending call (CallSid: {}).", callSid);
+            finalizeAndSaveCallLog(callSid, CallLog.CallStatus.COMPLETED, "최대 대화 도달");
             return twilioService.createHangupTwiML(FINAL_MESSAGE);
         }
     }
@@ -104,19 +110,24 @@ public class QnaService {
      * 통화가 종료될 때 대화 기록을 DB에 저장하고 저장소에서 삭제합니다.
      * @param callSid 통화 식별자
      * @param finalStatus 통화의 최종 상태
+     * @param reason 종료 사유
      */
     @Transactional
-    public void finalizeAndSaveCallLog(String callSid, CallLog.CallStatus finalStatus) {
+    public void finalizeAndSaveCallLog(String callSid, CallLog.CallStatus finalStatus, String reason) {
         List<ChatMessage> history = conversationStorage.get(callSid);
+        // 대화 기록이 없는 경우(예: 음성사서함 감지 직후)를 위해 null 체크 후 빈 리스트 할당
         if (history == null) {
-            log.warn("No conversation history found for CallSid: {}", callSid);
-            return;
+            history = new ArrayList<>();
         }
+        // 종료 사유를 대화 기록에 추가
+        history.add(new ChatMessage("System", "Call ended. Reason: " + reason));
+
+        final List<ChatMessage> effectivelyFinalHistory = history;
 
         callLogRepository.findByCallSid(callSid).ifPresentOrElse(callLog -> {
             try {
                 // 대화 내용을 JSON으로 변환
-                String callDataJson = objectMapper.writeValueAsString(history);
+                String callDataJson = objectMapper.writeValueAsString(effectivelyFinalHistory);
                 callLog.setCallData(callDataJson);
                 callLog.setStatus(finalStatus);
                 callLogRepository.save(callLog);
@@ -124,9 +135,18 @@ public class QnaService {
 
             } catch (JsonProcessingException e) {
                 log.error("Failed to serialize call data for CallSid: {}", callSid, e);
-                // JSON 변환 실패 시에도 상태는 업데이트
                 callLog.setStatus(CallLog.CallStatus.FAILED);
-                callLog.setCallData("{\"error\": \"Failed to process conversation data.\"}");
+                // 에러 메시지를 Map으로 만든 후 다시 JSON으로 변환하여 저장
+                Map<String, String> errorData = Map.of(
+                        "오류", "대화 내용 JSON 변환 실패",
+                        "사유", e.getMessage()
+                );
+                try {
+                    callLog.setCallData(objectMapper.writeValueAsString(errorData));
+                } catch (JsonProcessingException ex) {
+                    // 이중 실패 시, 간단한 텍스트로 저장
+                    callLog.setCallData("{\"error\": \"Failed to process conversation data and failed to serialize error message.\"}");
+                }
                 callLogRepository.save(callLog);
             }
         }, () -> {
@@ -135,5 +155,35 @@ public class QnaService {
 
         // 메모리에서 대화 내용 삭제
         conversationStorage.remove(callSid);
+    }
+
+    /**
+     * Twilio Status Callback을 처리하여 예기치 않은 통화 종료를 처리합니다.
+     * @param callSid 통화 식별자
+     * @param callStatus Twilio가 보낸 통화 상태
+     */
+    @Transactional
+    public void handleCallTermination(String callSid, String callStatus) {
+        log.info("Received status callback for CallSid: {}. Status: {}", callSid, callStatus);
+
+        callLogRepository.findByCallSid(callSid).ifPresent(callLog -> {
+            // 이미 callData가 저장되었다면(정상 종료된 경우), 아무것도 하지 않음
+            if (StringUtils.hasText(callLog.getCallData())) {
+                log.info("Call log for {} already finalized. Ignoring status callback.", callSid);
+                // 최종 상태 업데이트가 필요한 경우를 위해 메모리만 정리하고 종료
+                conversationStorage.remove(callSid);
+                return;
+            }
+
+            // Twilio 상태를 내부 상태로 매핑
+            CallLog.CallStatus finalStatus = switch (callStatus) {
+                case "completed" -> CallLog.CallStatus.COMPLETED;
+                case "canceled", "failed", "no-answer" -> CallLog.CallStatus.FAILED;
+                default -> CallLog.CallStatus.FAILED;
+            };
+
+            log.warn("Call {} terminated unexpectedly with status {}. Saving conversation log.", callSid, callStatus);
+            finalizeAndSaveCallLog(callSid, finalStatus, "Unexpected termination: " + callStatus);
+        });
     }
 }

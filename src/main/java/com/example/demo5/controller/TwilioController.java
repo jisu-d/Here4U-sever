@@ -49,4 +49,11 @@ public class TwilioController {
         String speechResult = request.getParameter("SpeechResult");
         return qnaService.processSurveyResponse(callSid, speechResult, baseUrl);
     }
+
+    @PostMapping(value = "/call/status")
+    public void handleStatusCallback(HttpServletRequest request) {
+        String callSid = request.getParameter("CallSid");
+        String callStatus = request.getParameter("CallStatus");
+        qnaService.handleCallTermination(callSid, callStatus);
+    }
 }
