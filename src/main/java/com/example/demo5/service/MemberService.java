@@ -1,9 +1,14 @@
 package com.example.demo5.service;
 
+import com.example.demo5.dto.call.CreateCallRequest;
+import com.example.demo5.dto.call.CreateCallResponse;
 import com.example.demo5.dto.member.CreateMemberRequest;
 import com.example.demo5.dto.member.MemberResponse;
+import com.example.demo5.entity.CallLog;
 import com.example.demo5.entity.Member;
+import com.example.demo5.repository.CallLogRepository;
 import com.example.demo5.repository.MemberRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +21,8 @@ import java.util.Base64; // 랜덤 ID 생성용
 public class MemberService {
 
     private final MemberRepository memberRepository;
+    private final CallLogRepository callLogRepository;
+    private final TwilioService twilioService;
     private static final SecureRandom random = new SecureRandom();
     private static final Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
 
@@ -45,6 +52,50 @@ public class MemberService {
         // 5. DTO로 변환하여 반환
         return new MemberResponse(savedMember);
     }
+
+    @Transactional
+    public CreateCallResponse initiateManualCall(String memberId, CreateCallRequest request, String ngrokUrl) {
+        // 1. 회원 조회
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 회원을 찾을 수 없습니다: " + memberId));
+
+        // 2. 통화 유형 확인
+        if (!"MANUAL".equalsIgnoreCase(request.getType())) {
+            throw new IllegalArgumentException("지원하지 않는 통화 유형입니다.");
+        }
+
+        // 3. 통화 기록(CallLog) 생성 및 저장
+        CallLog callLog = CallLog.builder()
+                .member(member)
+                .callType(CallLog.CallType.MANUAL)
+                .status(CallLog.CallStatus.QUEUED)
+                .build();
+        CallLog savedCallLog = callLogRepository.save(callLog);
+
+        // 4. 전화번호 형식 변환 (e.g., 010-1234-5678 -> +821012345678)
+        String formattedPhoneNumber = formatPhoneNumber(member.getPhoneNumber());
+
+        // 5. Twilio를 통해 전화 걸기
+        twilioService.makeCall(formattedPhoneNumber, ngrokUrl);
+
+        // 6. 응답 DTO 생성 및 반환
+        return new CreateCallResponse(savedCallLog);
+    }
+
+    /**
+     * 대한민국 전화번호를 E.164 형식으로 변환하는 헬퍼 메서드
+     * @param phoneNumber (e.g., "010-1234-5678")
+     * @return E.164 formatted phone number (e.g., "+821012345678")
+     */
+    private String formatPhoneNumber(String phoneNumber) {
+        String digitsOnly = phoneNumber.replaceAll("[^0-9]", "");
+        if (digitsOnly.startsWith("0")) {
+            return "+82" + digitsOnly.substring(1);
+        }
+        // 이미 국제 형식이거나 다른 형식일 경우 일단 그대로 반환 (또는 추가적인 예외 처리)
+        return digitsOnly;
+    }
+
 
     /**
      * 랜덤 영문/숫자 ID 생성 헬퍼 메서드

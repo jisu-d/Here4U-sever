@@ -1,15 +1,15 @@
 package com.example.demo5.controller;
 
+import com.example.demo5.dto.call.CreateCallRequest;
+import com.example.demo5.dto.call.CreateCallResponse;
 import com.example.demo5.dto.member.CreateMemberRequest;
 import com.example.demo5.dto.member.MemberResponse;
 import com.example.demo5.service.MemberService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class MemberController {
 
     private final MemberService memberService;
+
+    @Value("${server.base-url}")
+    private String baseUrl;
 
     /**
      * 1. 회원 추가 API
@@ -30,5 +33,18 @@ public class MemberController {
 
         // 201 Created 상태 코드와 함께 생성된 회원 정보를 반환
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * 2. 수동 전화 걸기 API
+     * [POST] /api/members/{memberId}/calls
+     */
+    @PostMapping("/{memberId}/calls")
+    public ResponseEntity<CreateCallResponse> makeManualCall(
+            @PathVariable String memberId,
+            @RequestBody CreateCallRequest request
+    ) {
+        CreateCallResponse response = memberService.initiateManualCall(memberId, request, baseUrl);
+        return ResponseEntity.ok(response);
     }
 }
