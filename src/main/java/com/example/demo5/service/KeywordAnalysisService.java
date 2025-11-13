@@ -30,15 +30,13 @@ public class KeywordAnalysisService {
     private final CallLogRepository callLogRepository;
     private final ObjectMapper objectMapper;
 
-    private static final String KEYWORD_EXTRACTION_PROMPT_TEMPLATE = """
-            다음 대화에서 가장 자주 언급된 키워드를 추출하세요.
+    // This will now be the custom system prompt for keyword extraction
+    private static final String KEYWORD_EXTRACTION_SYSTEM_PROMPT = """
+            당신은 주어진 대화에서 핵심 키워드를 추출하는 전문가입니다.
             대화는 사용자(User)와 AI의 상호작용으로 구성됩니다.
             특히 사용자가 중요하게 생각하거나 자주 언급하는 주제, 감정, 핵심 단어들을 중심으로 추출해주세요.
             추출된 키워드는 쉼표로 구분된 문자열 형태로 제공해주세요.
             예시: \"키워드1, 키워드2, 키워드3\"
-
-            대화:
-            %s
             """;
 
     @Transactional
@@ -89,8 +87,11 @@ public class KeywordAnalysisService {
         }
 
         // 3. OpenAI API를 사용하여 키워드 추출
-        String prompt = String.format(KEYWORD_EXTRACTION_PROMPT_TEMPLATE, aggregatedConversation.toString());
-        String aiResponse = openAiService.getChatResponse(List.of(new ChatMessage("User", prompt)));
+        // Pass the aggregated conversation as a UserMessage, and the keyword extraction instructions as the custom system prompt
+        String aiResponse = openAiService.getChatResponse(
+                List.of(new ChatMessage("User", "대화:\n" + aggregatedConversation.toString())),
+                KEYWORD_EXTRACTION_SYSTEM_PROMPT
+        );
 
         // 4. AI 응답에서 키워드 파싱
         Set<String> extractedKeywords = new HashSet<>();
