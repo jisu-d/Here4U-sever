@@ -37,7 +37,7 @@ public class CallScheduler {
         LocalTime now = LocalTime.now().truncatedTo(ChronoUnit.MINUTES);
         LocalDate today = LocalDate.now();
 
-        List<CallSchedule> activeSchedules = callScheduleRepository.findByIsActive(true);
+        List<CallSchedule> activeSchedules = callScheduleRepository.findActiveSchedulesWithMember(true);
         log.info("확인할 활성 스케줄 {}개 발견", activeSchedules.size());
 
         for (CallSchedule schedule : activeSchedules) {
