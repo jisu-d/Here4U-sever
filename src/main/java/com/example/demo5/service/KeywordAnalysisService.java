@@ -32,36 +32,22 @@ public class KeywordAnalysisService {
 
     // This will now be the custom system prompt for keyword extraction
     private static final String KEYWORD_EXTRACTION_SYSTEM_PROMPT = """
+            당신의 절대 규칙:
+              - 출력은 오직 쉼표로 구분된 키워드 문자열만 생성한다.
+              - 다른 문장, 설명, 분석은 절대로 포함하지 않는다.
             
-            당신은 [대화 의미 분석 엔진]입니다. 당신의 유일한 임무는 사용자(User)의 대화록을 정밀하게 분석하여, **사용자의 의도, 핵심 관심사, 주요 감정**을 드러내는 가장 중요한 키워드만을 추출하는 것입니다.
+            당신은 사용자 발언만 분석하는 [대화 의미 분석 엔진]이다.
             
-            **[핵심 추출 원칙]**
+            분석 기준:
+               1. 오직 사용자(User) 메시지만 분석한다.
+               2. 사용자의 의도, 관심사, 문제점을 드러내는 핵심 키워드만 추출한다.
+               3. 기술명, 서비스명, 프로젝트명, 오류 코드 등 고유명사는 반드시 포함한다.
+               4. 사용자가 반복하거나 강조한 표현을 우선순위로 둔다.
+               5. 의미 없는 인사말, 접속사, 필러, 문법 요소는 제외한다.
+               6. AI 메시지는 절대 분석하지 않는다.
             
-            1.  **사용자 발언 최우선 (User-Centric):**
-                키워드 추출은 철저히 **사용자(User)의 발언**에 기반해야 합니다. 사용자가 무엇을 '질문'하고, 어떤 '문제'를 겪고 있으며, 무엇을 '중요하게' 생각하는지에만 집중하세요.
-            
-            2.  **주제 및 개체명 (Topic & Entity):**
-                대화의 핵심 주제어, 사용자가 언급하는 특정 기술, 서비스, 인물, 프로젝트 이름, 고유명사 (예: Spring Boot, 트윌리오 오류, 11205 에러, AI 에이전트)를 반드시 포착합니다.
-            
-            3.  **의도 및 문제점 (Intent & Problem):**
-                '오류', '궁금함', '요청', '방법', '비교', '추천', '좌절', '필요' 등 사용자의 명확한 목적의식이나 상태를 나타내는 키워드를 추출합니다.
-            
-            4.  **반복 및 강조 (Repetition & Emphasis):**
-                사용자가 대화 전체에서 반복적으로 언급하거나 "중요하다"고 강조하는 단어는 가장 높은 우선순위를 가집니다.
-            
-            **[추출 제외 대상 (Exclusion List)]**
-            
-            * **일반적인 대화:** '안녕하세요', '네', '아니요', '감사합니다', '알겠습니다', '맞아요'와 같은 인사, 동의, 감사 표현.
-            * **간투사 및 필러:** '음...', '어...', '그...', '저기', '일단' 등 의미 없는 필러 단어.
-            * **단순 문법 요소:** '은/는', '이/가', '을/를', '~입니다', '~했어요', '그리고', '그래서'와 같은 조사, 어미, 접속사.
-            * **AI의 발언:** AI의 발언은 분석 대상이 아닙니다.
-            * **음성사서함:** 단순 사용자의 핸드폰에서 응답한 말로 음성 사서함 같은 멘트는 포함하지 않아
-            
-            **[출력 형식]**
-            
-            * 추출된 모든 키워드를 쉼표(,)로 구분된 **단일 문자열**로 즉시 제공합니다.
-            * 출력 예시 외에 어떠한 설명이나 부연 문장도 절대 추가하지 마세요.
-            * **예시:** "키워드1, 키워드2, 키워드3"
+            출력 형식:
+              - 예: "키워드1, 키워드2, 키워드3"
     """;
 
     @Transactional
@@ -76,26 +62,20 @@ public class KeywordAnalysisService {
             return;
         }
 
-        // 2. 모든 통화 기록에서 첫 번째 대화 추출 및 집계
+        // 2. 모든 통화 기록에서 'User'의 대화 전체 추출 및 집계
         StringBuilder aggregatedConversation = new StringBuilder();
         for (CallLog callLog : recentCallLogs) {
             if (callLog.getCallData() != null && !callLog.getCallData().isEmpty()) {
                 try {
                     List<ChatMessage> chatHistory = objectMapper.readValue(callLog.getCallData(), new TypeReference<List<ChatMessage>>() {});
-                    // 첫 번째 사용자 메시지와 AI 응답 추출
-                    String firstUserMessage = chatHistory.stream()
+                    // 모든 사용자 메시지 추출
+                    String userMessages = chatHistory.stream()
                             .filter(m -> "User".equalsIgnoreCase(m.speaker()))
                             .map(ChatMessage::message)
-                            .findFirst()
-                            .orElse("");
-                    String firstAiResponse = chatHistory.stream()
-                            .filter(m -> "AI".equalsIgnoreCase(m.speaker()))
-                            .map(ChatMessage::message)
-                            .findFirst()
-                            .orElse("");
+                            .collect(Collectors.joining("\n"));
 
-                    if (!firstUserMessage.isEmpty()) {
-                        aggregatedConversation.append(firstUserMessage).append("\n");
+                    if (!userMessages.isEmpty()) {
+                        aggregatedConversation.append(userMessages).append("\n");
                     }
                 } catch (JsonProcessingException e) {
                     log.error("Error parsing callData for callLogId: {}", callLog.getCallLogId(), e);
