@@ -59,6 +59,7 @@ public class OpenAiService {
             // 1. 시스템 메시지 생성 (customSystemPrompt가 있으면 사용, 없으면 기본 SYSTEM_PROMPT 사용)
             SystemMessage systemMessage;
             if (StringUtils.hasText(customSystemPrompt)) {
+                System.out.println("프롬포트 사용합!!");
                 systemMessage = new SystemMessage(customSystemPrompt);
             } else {
                 systemMessage = new SystemMessage(SYSTEM_PROMPT);
@@ -83,7 +84,7 @@ public class OpenAiService {
             // 4. Prompt 객체를 생성하여 API 호출
             Prompt prompt = new Prompt(finalMessages);
 
-            // 5. 해당 버전의 API 제약으로 인해, getOutput()의 getContent() 메소드로 내용을 가져옵니다.
+            // 5. API 응답에서 텍스트 내용을 추출합니다.
             return chatModel.call(prompt).getResult().getOutput().getText();
 
         } catch (Exception e) {
