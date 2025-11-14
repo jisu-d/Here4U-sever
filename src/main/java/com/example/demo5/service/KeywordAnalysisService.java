@@ -110,8 +110,10 @@ public class KeywordAnalysisService {
 
         // 3. OpenAI API를 사용하여 키워드 추출
         // Pass the aggregated conversation as a UserMessage, and the keyword extraction instructions as the custom system prompt
+        List<ChatMessage> messages = List.of(new ChatMessage("User", "대화:\n" + aggregatedConversation.toString()));
+        log.info("키워드 추출을 위해 OpenAI로 데이터를 전송합니다. 메시지: {}, 시스템 프롬프트: {}", messages, KEYWORD_EXTRACTION_SYSTEM_PROMPT);
         String aiResponse = openAiService.getChatResponse(
-                List.of(new ChatMessage("User", "대화:\n" + aggregatedConversation.toString())),
+                messages,
                 KEYWORD_EXTRACTION_SYSTEM_PROMPT
         );
 
