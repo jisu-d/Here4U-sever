@@ -61,7 +61,6 @@ public class OpenAiService {
             boolean useCustom = StringUtils.hasText(customSystemPrompt);
             // 1. 시스템 메시지 생성 (customSystemPrompt가 있으면 사용, 없으면 기본 SYSTEM_PROMPT 사용)
             if (useCustom) {
-                System.out.println("프롬포트 사용합!!");
                 systemMessage = new SystemMessage(customSystemPrompt);
             } else {
                 systemMessage = new SystemMessage(SYSTEM_PROMPT);
