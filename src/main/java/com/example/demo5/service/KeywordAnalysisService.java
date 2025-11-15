@@ -88,33 +88,20 @@ public class KeywordAnalysisService {
 
 
 
-        // 5. MemberKeyword 업데이트
+        // 5. MemberKeyword 업데이트 (기존 키워드를 덮어쓰기)
         memberKeywordRepository.findByMember_MemberId(memberId).ifPresentOrElse(memberKeyword -> {
             try {
-                // 기존 키워드 로드
-                Set<String> existingKeywords = objectMapper.readValue(memberKeyword.getKeyword(), new TypeReference<Set<String>>() {});
-                // 새 키워드 추가 (중복 제거)
-                existingKeywords.addAll(extractedKeywords);
-                // 업데이트된 키워드를 JSON 문자열로 저장
-                memberKeyword.setKeyword(objectMapper.writeValueAsString(existingKeywords));
+                // 새롭게 추출된 키워드로 기존 값을 완전히 대체
+                memberKeyword.setKeyword(objectMapper.writeValueAsString(extractedKeywords));
                 memberKeywordRepository.save(memberKeyword);
-                log.info("Updated keywords for memberId: {}. New keywords: {}", memberId, existingKeywords);
+                log.info("Replaced keywords for memberId: {}. New keywords: {}", memberId, extractedKeywords);
             } catch (JsonProcessingException e) {
-                log.error("Error processing existing keywords for memberId: {}", memberId, e);
+                log.error("Error processing and saving new keywords for memberId: {}", memberId, e);
             }
         }, () -> {
-            log.warn("MemberKeyword entry not found for memberId: {}. Creating a new one.", memberId);
-            // MemberKeyword가 없는 경우 새로 생성 (이 경우는 createMember에서 이미 생성되므로 발생하지 않아야 함)
-            // 하지만 방어적으로 코드를 작성
-            // Member member = memberRepository.findById(memberId).orElseThrow(() -> new EntityNotFoundException("Member not found"));
-            // MemberKeyword newMemberKeyword = new MemberKeyword();
-            // newMemberKeyword.setMember(member);
-            // try {
-            //     newMemberKeyword.setKeyword(objectMapper.writeValueAsString(extractedKeywords));
-            //     memberKeywordRepository.save(newMemberKeyword);
-            // } catch (JsonProcessingException e) {
-            //     log.error("Error creating new MemberKeyword for memberId: {}", memberId, e);
-            // }
+            log.warn("MemberKeyword entry not found for memberId: {}. This should not happen if member is created correctly.", memberId);
+            // MemberKeyword가 없는 경우 새로 생성하는 로직이 필요하다면 여기에 구현합니다.
+            // 현재는 생성 로직이 주석 처리되어 있으므로, 찾지 못했을 경우 경고만 기록합니다.
         });
     }
 }
