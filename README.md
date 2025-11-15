@@ -1,9 +1,5 @@
 # Here4U-sever API 명세서
 
-이 문서는 Here4U-sever의 주요 API 엔드포인트와 데이터 전송 객체(DTO)에 대한 명세서입니다.
-
----
-
 ## 1. 회원 관련 API (`/api/members`)
 
 ### 1.1. 회원 추가
