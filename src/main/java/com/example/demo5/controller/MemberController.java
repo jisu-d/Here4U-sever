@@ -1,6 +1,5 @@
 package com.example.demo5.controller;
 
-import com.example.demo5.dto.call.CreateCallRequest;
 import com.example.demo5.dto.call.CreateCallResponse;
 import com.example.demo5.dto.member.CreateMemberRequest;
 import com.example.demo5.dto.member.MemberKeywordResponse;
@@ -47,22 +46,15 @@ public class MemberController {
      */
     @PostMapping("/{memberId}/calls")
     public ResponseEntity<CreateCallResponse> makeManualCall(
-            @PathVariable String memberId,
-            @RequestBody CreateCallRequest request
+            @PathVariable String memberId
     ) {
-        CreateCallResponse response = memberService.initiateManualCall(memberId, request, baseUrl);
+        CreateCallResponse response = memberService.initiateManualCall(memberId, baseUrl);
         return ResponseEntity.ok(response);
     }
 
     /**
      * 3. 자동 전화 스케줄 등록 API
      * [POST] /api/members/{memberId}/schedules
-     *  {
-     *     "startDate": "2025-11-15",
-     *     "frequency": "MONTHLY",
-     *     "callTime": "19:00:00",
-     *     "isActive": true
-     * }
      */
     @PostMapping("/{memberId}/schedules")
     public ResponseEntity<CreateScheduleResponse> addSchedule(

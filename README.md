@@ -30,20 +30,12 @@
 *   **설명**: 특정 회원에게 수동으로 전화를 겁니다.
 *   **경로 변수**:
     *   `memberId` (string): 전화를 걸 회원의 ID
-*   **요청 바디**: `CreateCallRequest`
-    *   `scriptId` (string, 선택): 사용할 스크립트 ID
-    ```json
-    {
-      "scriptId": "default-script"
-    }
-    ```
+*   **요청 바디**: 없음
 *   **응답 바디**: `CreateCallResponse`
+    *   `status`는 `QUEUED`, `COMPLETED`, `FAILED` 중 하나의 값을 가집니다.
     ```json
     {
       "callLogId": 1,
-      "callSid": "CAxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-      "memberId": "aB1cD",
-      "callType": "MANUAL",
       "status": "QUEUED"
     }
     ```

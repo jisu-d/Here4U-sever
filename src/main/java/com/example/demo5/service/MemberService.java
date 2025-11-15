@@ -1,6 +1,5 @@
 package com.example.demo5.service;
 
-import com.example.demo5.dto.call.CreateCallRequest;
 import com.example.demo5.dto.call.CreateCallResponse;
 import com.example.demo5.dto.member.CreateMemberRequest;
 import com.example.demo5.dto.member.MemberKeywordResponse;
@@ -98,7 +97,7 @@ public class MemberService {
     }
 
     @Transactional
-    public CreateCallResponse initiateManualCall(String memberId, CreateCallRequest request, String baseUrl) {
+    public CreateCallResponse initiateManualCall(String memberId, String baseUrl) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 ID의 회원을 찾을 수 없습니다: " + memberId));
         return initiateCall(member, CallLog.CallType.MANUAL, baseUrl);
