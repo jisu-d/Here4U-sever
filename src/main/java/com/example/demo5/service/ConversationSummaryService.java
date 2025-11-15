@@ -56,7 +56,7 @@ public class ConversationSummaryService {
             }
         }
 
-        if (aggregatedConversation.length() == 0) {
+        if (aggregatedConversation.isEmpty()) {
             return "분석할 대화 내용이 없습니다.";
         }
 
