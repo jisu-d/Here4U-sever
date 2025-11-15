@@ -71,6 +71,8 @@ public class KeywordAnalysisService {
         log.info("키워드 추출을 위해 KeywordAiService로 데이터를 전송합니다. MemberId: {}", memberId);
         String aiResponse = keywordAiService.extractKeywords(aggregatedConversation.toString());
 
+        System.out.println(aiResponse);
+
         // 4. AI 응답에서 키워드 파싱
         Set<String> extractedKeywords = new HashSet<>();
         if (aiResponse != null && !aiResponse.trim().isEmpty()) {
@@ -83,6 +85,8 @@ public class KeywordAnalysisService {
                 }
             }
         }
+
+
 
         // 5. MemberKeyword 업데이트
         memberKeywordRepository.findByMember_MemberId(memberId).ifPresentOrElse(memberKeyword -> {
