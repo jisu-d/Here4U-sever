@@ -5,6 +5,7 @@ import com.example.demo5.dto.call.CreateCallResponse;
 import com.example.demo5.dto.member.CreateMemberRequest;
 import com.example.demo5.dto.member.MemberKeywordResponse;
 import com.example.demo5.dto.member.MemberResponse;
+import com.example.demo5.dto.member.ConversationSummaryResponse;
 import com.example.demo5.dto.member.MemberStatusTagResponse;
 import com.example.demo5.dto.schedule.ScheduleRequest;
 import com.example.demo5.dto.schedule.CreateScheduleResponse;
@@ -107,6 +108,19 @@ public class MemberController {
             @PathVariable String memberId
     ) {
         MemberStatusTagResponse response = memberService.getMemberStatusTag(memberId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 7. 7일간 대화 요약 조회 API
+     * [GET] /api/members/{memberId}/summary
+     */
+    @GetMapping("/{memberId}/summary")
+    public ResponseEntity<ConversationSummaryResponse> getConversationSummary(
+            @PathVariable String memberId
+    ) {
+        String summary = memberService.getConversationSummary(memberId);
+        ConversationSummaryResponse response = new ConversationSummaryResponse(summary);
         return ResponseEntity.ok(response);
     }
 }

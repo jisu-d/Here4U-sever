@@ -3,22 +3,22 @@ package com.example.demo5.service;
 import com.example.demo5.dto.call.CreateCallRequest;
 import com.example.demo5.dto.call.CreateCallResponse;
 import com.example.demo5.dto.member.CreateMemberRequest;
-import com.example.demo5.dto.member.MemberResponse;
 import com.example.demo5.dto.member.MemberKeywordResponse;
+import com.example.demo5.dto.member.MemberResponse;
 import com.example.demo5.dto.member.MemberStatusTagResponse;
-import com.example.demo5.dto.schedule.ScheduleRequest;
 import com.example.demo5.dto.schedule.CreateScheduleResponse;
+import com.example.demo5.dto.schedule.ScheduleRequest;
 import com.example.demo5.dto.schedule.UpdateScheduleResponse;
 import com.example.demo5.entity.CallLog;
 import com.example.demo5.entity.CallSchedule;
 import com.example.demo5.entity.Member;
-import com.example.demo5.entity.MemberKeyword; // New import
-import com.example.demo5.entity.MemberStatus; // New import
+import com.example.demo5.entity.MemberKeyword;
+import com.example.demo5.entity.MemberStatus;
 import com.example.demo5.repository.CallLogRepository;
 import com.example.demo5.repository.CallScheduleRepository;
-import com.example.demo5.repository.MemberKeywordRepository; // New import
+import com.example.demo5.repository.MemberKeywordRepository;
 import com.example.demo5.repository.MemberRepository;
-import com.example.demo5.repository.MemberStatusRepository; // New import
+import com.example.demo5.repository.MemberStatusRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,8 +26,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.SecureRandom; // 랜덤 ID 생성용
-import java.util.Base64; // 랜덤 ID 생성용
+import java.security.SecureRandom;
+import java.util.Base64;
 
 @Slf4j
 @Service
@@ -35,11 +35,12 @@ import java.util.Base64; // 랜덤 ID 생성용
 public class MemberService {
 
     private final MemberRepository memberRepository;
-    private final MemberKeywordRepository memberKeywordRepository; // New injection
-    private final MemberStatusRepository memberStatusRepository; // New injection
+    private final MemberKeywordRepository memberKeywordRepository;
+    private final MemberStatusRepository memberStatusRepository;
     private final CallLogRepository callLogRepository;
     private final CallScheduleRepository callScheduleRepository;
     private final TwilioService twilioService;
+    private final ConversationSummaryService conversationSummaryService; // New
     private static final SecureRandom random = new SecureRandom();
     private static final Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
 
@@ -86,6 +87,14 @@ public class MemberService {
         MemberStatus memberStatus = memberStatusRepository.findByMember_MemberId(memberId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 ID의 회원 상태를 찾을 수 없습니다: " + memberId));
         return new MemberStatusTagResponse(memberStatus);
+    }
+
+    @Transactional(readOnly = true)
+    public String getConversationSummary(String memberId) {
+        memberRepository.findById(memberId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 회원을 찾을 수 없습니다: " + memberId));
+
+        return conversationSummaryService.getConversationSummary(memberId);
     }
 
     @Transactional
