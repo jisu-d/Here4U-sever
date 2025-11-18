@@ -11,4 +11,5 @@ public class AnalysisResponse {
     private String keywords;
     private String currentMood;
     private String feedback;
+    private String summaryQuestion;
 }

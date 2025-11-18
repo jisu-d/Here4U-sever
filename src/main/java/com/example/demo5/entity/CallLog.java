@@ -42,6 +42,12 @@ public class CallLog {
     @Column(name = "call_data", columnDefinition = "json")
     private String callData;
 
+    @Column(name = "call_result_sentiment")
+    private String callResultSentiment;
+
+    @Column(name = "simple_summary", length = 50)
+    private String simpleSummary;
+
     public void setCallSid(String callSid) {
         this.callSid = callSid;
     }
@@ -52,6 +58,14 @@ public class CallLog {
 
     public void setStatus(CallStatus status) {
         this.status = status;
+    }
+
+    public void setCallResultSentiment(String callResultSentiment) {
+        this.callResultSentiment = callResultSentiment;
+    }
+
+    public void setSimpleSummary(String simpleSummary) {
+        this.simpleSummary = simpleSummary;
     }
 
     @Builder

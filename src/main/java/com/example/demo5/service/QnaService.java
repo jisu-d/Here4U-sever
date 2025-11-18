@@ -1,6 +1,7 @@
 package com.example.demo5.service;
 
 import com.example.demo5.dto.ChatMessage;
+import com.example.demo5.dto.analysis.AnalysisResponse;
 import com.example.demo5.entity.CallLog;
 import com.example.demo5.repository.CallLogRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -119,46 +120,50 @@ public class QnaService {
     @Transactional
     public void finalizeAndSaveCallLog(String callSid, CallLog.CallStatus finalStatus, String reason) {
         List<ChatMessage> history = conversationStorage.get(callSid);
-        // 대화 기록이 없는 경우(예: 음성사서함 감지 직후)를 위해 null 체크 후 빈 리스트 할당
         if (history == null) {
             history = new ArrayList<>();
         }
-        // 종료 사유를 대화 기록에 추가
         history.add(new ChatMessage("System", "Call ended. Reason: " + reason));
 
         final List<ChatMessage> effectivelyFinalHistory = history;
 
         callLogRepository.findByCallSid(callSid).ifPresentOrElse(callLog -> {
             try {
-                // 대화 내용을 JSON으로 변환
+                // 1. 대화 내용을 JSON으로 변환하여 CallLog에 설정
                 String callDataJson = objectMapper.writeValueAsString(effectivelyFinalHistory);
                 callLog.setCallData(callDataJson);
                 callLog.setStatus(finalStatus);
+
+                // 2. AI 분석 수행
+                String memberId = callLog.getMember().getMemberId();
+                AnalysisResponse analysisResult = keywordAnalysisService.performAnalysis(memberId);
+
+                // 3. 분석 결과로 CallLog 엔티티 필드 채우기
+                callLog.setSimpleSummary(analysisResult.getCurrentMood());
+                callLog.setCallResultSentiment(analysisResult.getSummaryQuestion());
+
+                // 4. 모든 정보가 채워진 CallLog를 DB에 저장
                 callLogRepository.save(callLog);
-                log.info("Successfully saved call log for CallSid: {}", callSid);
+                log.info("Successfully saved call log with analysis for CallSid: {}", callSid);
 
-                // Trigger keyword analysis
-                keywordAnalysisService.analyzeAndSaveConversationAnalysis(callLog.getMember().getMemberId());
+                // 5. 다른 테이블들 업데이트
+                // 5-1. MemberKeyword 테이블 업데이트
+                keywordAnalysisService.saveKeywords(memberId, analysisResult);
 
-                // Trigger member status analysis
-                memberStatusAnalysisService.analyzeAndSaveMemberStatus(callLog.getMember().getMemberId(), callLog.getRequestedAt());
+                // 5-2. MemberStatus 테이블 업데이트
+                memberStatusAnalysisService.analyzeAndSaveMemberStatus(memberId, callLog.getRequestedAt());
 
             } catch (JsonProcessingException e) {
                 log.error("Failed to serialize call data for CallSid: {}", callSid, e);
                 callLog.setStatus(CallLog.CallStatus.FAILED);
-                // 에러 메시지를 Map으로 만든 후 다시 JSON으로 변환하여 저장
-                Map<String, String> errorData = Map.of(
-                        "오류", "대화 내용 JSON 변환 실패",
-                        "사유", e.getMessage()
-                );
+                Map<String, String> errorData = Map.of("오류", "대화 내용 JSON 변환 실패", "사유", e.getMessage());
                 try {
                     callLog.setCallData(objectMapper.writeValueAsString(errorData));
                 } catch (JsonProcessingException ex) {
-                    // 이중 실패 시, 간단한 텍스트로 저장
                     callLog.setCallData("{\"error\": \"Failed to process conversation data and failed to serialize error message.\"}");
                 }
                 callLogRepository.save(callLog);
-            }
+            } 
         }, () -> {
             log.error("Could not find CallLog entry for CallSid: {}", callSid);
         });

@@ -90,14 +90,14 @@ public class MemberService {
 
         if (analysisJson == null || analysisJson.trim().isEmpty() || analysisJson.equals("[]")) {
             log.warn("회원 ID {}에 대한 분석 데이터가 비어있습니다.", memberId);
-            return new AnalysisResponse("분석 데이터 없음", "정보 없음", "아직 분석된 대화 내용이 없습니다.");
+            return new AnalysisResponse("분석 데이터 없음", "정보 없음", "아직 분석된 대화 내용이 없습니다.", "해당 없음");
         }
 
         try {
             return objectMapper.readValue(analysisJson, AnalysisResponse.class);
         } catch (JsonProcessingException e) {
             log.error("DB의 분석 데이터를 파싱하는 데 실패했습니다. memberId: {}, data: {}", memberId, analysisJson, e);
-            return new AnalysisResponse("데이터 파싱 오류", "오류", "저장된 분석 데이터를 읽는 중 문제가 발생했습니다.");
+            return new AnalysisResponse("데이터 파싱 오류", "오류", "저장된 분석 데이터를 읽는 중 문제가 발생했습니다.", "오류");
         }
     }
 
