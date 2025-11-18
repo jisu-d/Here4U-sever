@@ -2,6 +2,7 @@ package com.example.demo5.controller;
 
 import com.example.demo5.dto.analysis.AnalysisResponse;
 import com.example.demo5.dto.call.CreateCallResponse;
+import com.example.demo5.dto.call.CallHistoryResponse;
 import com.example.demo5.dto.call.LatestCallStatusResponse;
 import com.example.demo5.dto.member.CreateMemberRequest;
 import com.example.demo5.dto.member.MemberResponse;
@@ -16,6 +17,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -126,6 +129,18 @@ public class MemberController {
             @PathVariable String memberId
     ) {
         LatestCallStatusResponse response = memberService.getLatestAutoCallStatus(memberId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 9. 최근 통화 기록 3건 조회 API
+     * [GET] /api/members/{memberId}/call-history
+     */
+    @GetMapping("/{memberId}/call-history")
+    public ResponseEntity<List<CallHistoryResponse>> getCallHistory(
+            @PathVariable String memberId
+    ) {
+        List<CallHistoryResponse> response = memberService.getCallHistory(memberId);
         return ResponseEntity.ok(response);
     }
 }

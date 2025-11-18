@@ -2,6 +2,7 @@ package com.example.demo5.service;
 
 import com.example.demo5.dto.analysis.AnalysisResponse;
 import com.example.demo5.dto.call.CreateCallResponse;
+import com.example.demo5.dto.call.CallHistoryResponse;
 import com.example.demo5.dto.call.LatestCallStatusResponse;
 import com.example.demo5.dto.member.CreateMemberRequest;
 import com.example.demo5.dto.member.MemberResponse;
@@ -31,7 +32,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -129,6 +132,23 @@ public class MemberService {
         String time = callLog.getRequestedAt().format(DateTimeFormatter.ofPattern("HH:mm"));
 
         return new LatestCallStatusResponse(callResult, time);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CallHistoryResponse> getCallHistory(String memberId) {
+        List<CallLog> callLogs = callLogRepository.findTop3ByMember_MemberIdOrderByRequestedAtDesc(memberId);
+
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MM/dd");
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+
+        return callLogs.stream()
+                .map(callLog -> CallHistoryResponse.builder()
+                        .summaryQuestion(Optional.ofNullable(callLog.getCallResultSentiment()).orElse("기록 없음"))
+                        .mood(Optional.ofNullable(callLog.getSimpleSummary()).orElse("기록 없음"))
+                        .date(callLog.getRequestedAt().format(dateFormatter))
+                        .time(callLog.getRequestedAt().format(timeFormatter))
+                        .build())
+                .collect(Collectors.toList());
     }
 
     @Transactional

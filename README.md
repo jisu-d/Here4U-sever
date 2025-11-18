@@ -168,5 +168,37 @@
     *   `200 OK`: 조회 성공
     *   `404 Not Found`: 해당 ID의 회원을 찾을 수 없음
 
+### 1.9. 최근 통화 기록 3건 조회
+*   **엔드포인트**: `GET /api/members/{memberId}/call-history`
+*   **설명**: 특정 회원의 가장 최근 통화 기록 3건의 분석 내용과 날짜, 시간을 조회합니다.
+*   **경로 변수**:
+    *   `memberId` (string): 조회할 회원의 ID
+*   **응답 바디**: `List<CallHistoryResponse>`
+    ```json
+    [
+      {
+        "summaryQuestion": "오늘 하루는 어떠셨나요?",
+        "mood": "긍정",
+        "date": "11/21",
+        "time": "10:20"
+      },
+      {
+        "summaryQuestion": "최근 식사는 잘 챙기셨나요?",
+        "mood": "중립",
+        "date": "11/20",
+        "time": "18:30"
+      },
+      {
+        "summaryQuestion": "기분 전환이 필요해 보이시네요.",
+        "mood": "부정",
+        "date": "11/19",
+        "time": "09:15"
+      }
+    ]
+    ```
+*   **상태 코드**:
+    *   `200 OK`: 조회 성공
+    *   `404 Not Found`: 해당 ID의 회원을 찾을 수 없음
+
 
 
