@@ -157,10 +157,10 @@
 *   **경로 변수**:
     *   `memberId` (string): 조회할 회원의 ID
 *   **응답 바디**: `LatestCallStatusResponse`
-    *   `status`는 "완료", "부재중", "기록 없음" 중 하나의 값을 가집니다.
+    *   `callResult`는 "완료", "부재중", "기록 없음" 중 하나의 값을 가집니다.
     ```json
     {
-      "status": "완료",
+      "callResult": "완료",
       "time": "10:20"
     }
     ```

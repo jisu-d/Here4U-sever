@@ -125,10 +125,10 @@ public class MemberService {
         }
 
         CallLog callLog = latestAutoCall.get();
-        String status = callLog.getStatus() == CallLog.CallStatus.COMPLETED ? "완료" : "부재중";
+        String callResult = callLog.getStatus() == CallLog.CallStatus.COMPLETED ? "완료" : "부재중";
         String time = callLog.getRequestedAt().format(DateTimeFormatter.ofPattern("HH:mm"));
 
-        return new LatestCallStatusResponse(status, time);
+        return new LatestCallStatusResponse(callResult, time);
     }
 
     @Transactional
