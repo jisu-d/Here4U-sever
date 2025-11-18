@@ -26,8 +26,8 @@ public class ConversationSummaryService {
 
     private static final String SUMMARY_SYSTEM_PROMPT = """
             당신은 대화 요약 전문가입니다.
-            주어진 대화 내용을 분석하여, 전체 맥락을 포함하는 핵심적인 내용으로 1~2줄의 짧은 문장으로 요약해주세요.
-            반드시 한국어로 요약해야 합니다.
+            주어진 대화 내용을 분석하여, 전체 맥락을 포괄하는 핵심적인 내용으로 한줄의 짧은 문장으로 요약해주세요.
+            반드시 한국어로 요약해야 합니다. 최대 글자수 제한은 30자 입니다.
             """;
 
     @Transactional(readOnly = true)
