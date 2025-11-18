@@ -138,7 +138,7 @@ public class QnaService {
                 log.info("Successfully saved call log for CallSid: {}", callSid);
 
                 // Trigger keyword analysis
-                keywordAnalysisService.analyzeAndSaveKeywords(callLog.getMember().getMemberId(), callLog.getRequestedAt());
+                keywordAnalysisService.analyzeAndSaveConversationAnalysis(callLog.getMember().getMemberId());
 
                 // Trigger member status analysis
                 memberStatusAnalysisService.analyzeAndSaveMemberStatus(callLog.getMember().getMemberId(), callLog.getRequestedAt());

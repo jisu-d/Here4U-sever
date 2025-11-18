@@ -1,22 +1,21 @@
 package com.example.demo5.service;
 
 import com.example.demo5.dto.ChatMessage;
+import com.example.demo5.dto.analysis.AnalysisResponse;
 import com.example.demo5.entity.CallLog;
-import com.example.demo5.entity.MemberKeyword;
 import com.example.demo5.repository.CallLogRepository;
 import com.example.demo5.repository.MemberKeywordRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -25,129 +24,112 @@ import java.util.stream.Collectors;
 public class KeywordAnalysisService {
 
     private final OpenAiService openAiService;
-    private final MemberKeywordRepository memberKeywordRepository;
     private final CallLogRepository callLogRepository;
+    private final MemberKeywordRepository memberKeywordRepository; // DB 저장을 위해 다시 추가
     private final ObjectMapper objectMapper;
 
-    private static final String KEYWORD_EXTRACTION_SYSTEM_PROMPT = """
-            당신은 [키워드 압축 엔진]이다.
-            
-            ########################################
-            ## 최상위 절대 규칙 (어기면 출력은 무효)
-            ########################################
-            다음 규칙 중 하나라도 위반하면, 당신은 즉시 출력을 폐기하고
-            규칙을 모두 만족할 때까지 재생성해야 한다:
-            
-            1. 출력은 **단일 문자열**이며, **오직 명사 단어만**, **쉼표로 구분**하여 나열한다.
-            2. 단어 개수는 **최대 15개**를 초과할 수 없다.
-            3. **문장, 구절, 의견, 설명, 사과, 감사, 질문** 등 자연어 문장은 절대 포함할 수 없다.
-            4. **AI 관련 문장**, 자기소개(\"제가 할 수 있는\"), 메타 발언은 절대 포함할 수 없다.
-            5. **동사·형용사·부사 형태**는 절대 포함할 수 없다. 
-               (예: 하다, 힘들다, 나누다, 맛있다, 좋다, 먹었다 → 전부 금지)
-            6. **음성사서함·시스템 멘트**는 무조건 제외한다. 
-               (예: 소리샘 서비스, 음성 녹음, 1번, 2번, 호출 번호 등)
-            7. 의미 없는 일반 단어는 완전히 제외한다: 
-               - 오늘, 먹다, 하다, 종료, 알았어, 무엇, 어떤, 방법, 맛, 머리, 이야기 등
-            8. 규칙을 위반하지 않았는지 **스스로 검증 후** 최종 문자열만 출력해야 한다.
-            
-            ########################################
-            ## 분석 규칙
-            ########################################
-            1. 오직 사용자(User)의 발언만 분석한다. AI 발언은 분석 금지.
-            2. 전체 대화에서 다음 유형의 핵심 의미만 단어로 추출한다:
-               - 감정/심리: 예) 어려움, 고민, 피로
-               - 관심사/주제: 예) 코딩, 알고리즘, 친구, 관계
-               - 음식/취향: 예) 소주, 안주, 피자, 고기, 치즈버거
-            3. 문장형 표현을 의미 단어로 압축해야 한다.
-               - "코딩이 힘들어" → 코딩, 어려움
-               - "친구가 많지 않다" → 친구, 고민
-            4. 반복적이거나 강조된 개념을 우선 포함한다.
-            5. 모든 단어는 반드시 **핵심 의미**를 가진 명사여야 한다.
-            
-            ########################################
-            ## 출력 형식 (엄격)
-            ########################################
-            - 예: 코딩, 어려움, 알고리즘, 소주, 안주, 피자, 고기, 친구, 고민, 음식
-            - 단일 문자열
-            - 쉼표로 구분
-            - 명사만, 15개 이하
-            - 규칙 위반 시 자동으로 재출력
-            
-    """;
+    private static final String ANALYSIS_SYSTEM_PROMPT = """
+            "너는 대화 내용을 분석하고 세 가지 항목을 추출하는 전문가야.
+            사용자의 대화 내용이 주어지면 다음 규칙을 반드시 지켜서 결과를 반환해줘.
 
+            1. 주요 키워드들을 공백으로 구분하여 한 줄로 요약.
+            2. 대화의 전반적인 분위기나 감정을 '긍정적', '부정적', '중립' 등 한 단어로 표현.
+            3. 분석 내용을 바탕으로 사용자에게 전달할 격려나 조언의 피드백을 한 문장으로 작성.
+
+            결과는 반드시 ['키워드 목록', '감정', '피드백 문장'] 형태의 파싱 가능한 단일 리스트 문자열로만 반환해야 해. 다른 부가적인 설명은 절대 추가하지 마."
+            """;
+
+    /**
+     * 대화를 분석하고 그 결과를 DB에 저장합니다. (QnaService에서 호출)
+     */
     @Transactional
-    public void analyzeAndSaveKeywords(String memberId, LocalDateTime analysisEndTime) {
+    public void analyzeAndSaveConversationAnalysis(String memberId) {
+        // 1. AI를 통해 대화 내용 분석
+        AnalysisResponse analysisResponse = performAnalysis(memberId);
+
+        // 2. 분석 결과를 JSON 문자열로 변환
+        try {
+            String analysisJson = objectMapper.writeValueAsString(analysisResponse);
+
+            // 3. DB에 저장
+            memberKeywordRepository.findByMember_MemberId(memberId).ifPresentOrElse(memberKeyword -> {
+                memberKeyword.setKeyword(analysisJson);
+                memberKeywordRepository.save(memberKeyword);
+                log.info("회원 ID {}의 대화 분석 결과를 DB에 저장했습니다.", memberId);
+            }, () -> {
+                log.error("회원 ID {}에 해당하는 MemberKeyword 엔티티를 찾을 수 없습니다.", memberId);
+                throw new EntityNotFoundException("MemberKeyword not found for memberId: " + memberId);
+            });
+
+        } catch (JsonProcessingException e) {
+            log.error("AnalysisResponse를 JSON으로 변환하는 데 실패했습니다. memberId: {}", memberId, e);
+        }
+    }
+
+    /**
+     * AI를 통해 실제 분석을 수행하는 내부 로직
+     */
+    private AnalysisResponse performAnalysis(String memberId) {
+        LocalDateTime analysisEndTime = LocalDateTime.now();
         LocalDateTime analysisStartTime = analysisEndTime.minusDays(7);
 
-        // 1. 지난 7일간의 통화 기록 가져오기
         List<CallLog> recentCallLogs = callLogRepository.findByMember_MemberIdAndRequestedAtBetween(memberId, analysisStartTime, analysisEndTime);
 
         if (recentCallLogs.isEmpty()) {
-            log.info("No recent call logs found for memberId: {} within the last 7 days.", memberId);
-            return;
+            log.info("분석할 최근 통화 기록이 없습니다. memberId: {}", memberId);
+            return new AnalysisResponse("통화 기록 없음", "정보 없음", "최근 통화 기록이 없어 분석할 수 없습니다.");
         }
 
-        // 2. 모든 통화 기록에서 'User'의 대화 전체 추출 및 집계
-        StringBuilder aggregatedConversation = new StringBuilder();
-        for (CallLog callLog : recentCallLogs) {
-            if (callLog.getCallData() != null && !callLog.getCallData().isEmpty()) {
-                try {
-                    List<ChatMessage> chatHistory = objectMapper.readValue(callLog.getCallData(), new TypeReference<List<ChatMessage>>() {});
-                    // 모든 사용자 메시지 추출
-                    String userMessages = chatHistory.stream()
-                            .filter(m -> "User".equalsIgnoreCase(m.speaker()))
-                            .map(ChatMessage::message)
-                            .collect(Collectors.joining("\n"));
+        String aggregatedConversation = recentCallLogs.stream()
+                .map(this::extractUserMessagesFromCallLog)
+                .collect(Collectors.joining("\n"));
 
-                    if (!userMessages.isEmpty()) {
-                        aggregatedConversation.append(userMessages).append("\n");
-                    }
-                } catch (JsonProcessingException e) {
-                    log.error("Error parsing callData for callLogId: {}", callLog.getCallLogId(), e);
-                }
+        if (aggregatedConversation.trim().isEmpty()) {
+            log.info("통화 기록에서 유효한 대화 내용을 찾을 수 없습니다. memberId: {}", memberId);
+            return new AnalysisResponse("유효 대화 없음", "정보 없음", "최근 통화에서 유효한 대화 내용이 없어 분석할 수 없습니다.");
+        }
+
+        List<ChatMessage> messages = List.of(new ChatMessage("User", "대화:\n" + aggregatedConversation));
+        log.info("AI 분석을 위해 OpenAI로 데이터를 전송합니다. MemberId: {}", memberId);
+        String aiResponse = openAiService.getChatResponse(messages, ANALYSIS_SYSTEM_PROMPT);
+
+        return parseAiResponse(aiResponse);
+    }
+
+    private String extractUserMessagesFromCallLog(CallLog callLog) {
+        if (callLog.getCallData() == null || callLog.getCallData().isEmpty()) {
+            return "";
+        }
+        try {
+            List<ChatMessage> chatHistory = objectMapper.readValue(callLog.getCallData(), new TypeReference<>() {});
+            return chatHistory.stream()
+                    .filter(m -> "User".equalsIgnoreCase(m.speaker()))
+                    .map(ChatMessage::message)
+                    .collect(Collectors.joining("\n"));
+        } catch (JsonProcessingException e) {
+            log.error("통화 기록 파싱 중 오류 발생 callLogId: {}", callLog.getCallLogId(), e);
+            return "";
+        }
+    }
+
+    private AnalysisResponse parseAiResponse(String aiResponse) {
+        if (aiResponse == null || aiResponse.trim().isEmpty()) {
+            log.error("AI로부터 비어있는 응답을 받았습니다.");
+            return new AnalysisResponse("분석 실패", "오류", "AI 응답이 없습니다.");
+        }
+
+        // 파싱 로직: ['키워드', '감정', '피드백']
+        String content = aiResponse.trim();
+        if (content.startsWith("['") && content.endsWith("']")) {
+            content = content.substring(2, content.length() - 2);
+            String[] parts = content.split("', '", 3);
+
+            if (parts.length == 3) {
+                return new AnalysisResponse(parts[0], parts[1], parts[2]);
             }
         }
 
-        if (aggregatedConversation.length() == 0) {
-            log.info("No valid conversation data found in recent call logs for memberId: {}.", memberId);
-            return;
-        }
-
-        // 3. OpenAI API를 사용하여 키워드 추출
-        List<ChatMessage> messages = List.of(new ChatMessage("User", "대화:\n" + aggregatedConversation.toString()));
-        log.info("키워드 추출을 위해 OpenAI로 데이터를 전송합니다. MemberId: {}", memberId);
-        String aiResponse = openAiService.getChatResponse(
-                messages,
-                KEYWORD_EXTRACTION_SYSTEM_PROMPT
-        );
-
-        // 4. AI 응답에서 키워드 파싱
-        Set<String> extractedKeywords = new HashSet<>();
-        if (aiResponse != null && !aiResponse.trim().isEmpty()) {
-            // 쉼표로 구분된 문자열을 파싱
-            String[] keywordsArray = aiResponse.split(",");
-            for (String keyword : keywordsArray) {
-                String trimmedKeyword = keyword.trim();
-                if (!trimmedKeyword.isEmpty()) {
-                    extractedKeywords.add(trimmedKeyword);
-                }
-            }
-        }
-
-        // 5. MemberKeyword 업데이트 (기존 키워드를 덮어쓰기)
-        memberKeywordRepository.findByMember_MemberId(memberId).ifPresentOrElse(memberKeyword -> {
-            try {
-                // 새롭게 추출된 키워드로 기존 값을 완전히 대체
-                memberKeyword.setKeyword(objectMapper.writeValueAsString(extractedKeywords));
-                memberKeywordRepository.save(memberKeyword);
-                log.info("Replaced keywords for memberId: {}. New keywords: {}", memberId, extractedKeywords);
-            } catch (JsonProcessingException e) {
-                log.error("Error processing and saving new keywords for memberId: {}", memberId, e);
-            }
-        }, () -> {
-            log.warn("MemberKeyword entry not found for memberId: {}. This should not happen if member is created correctly.", memberId);
-            // MemberKeyword가 없는 경우 새로 생성하는 로직이 필요하다면 여기에 구현합니다.
-            // 현재는 생성 로직이 주석 처리되어 있으므로, 찾지 못했을 경우 경고만 기록합니다.
-        });
+        log.error("AI 응답을 파싱할 수 없습니다. 응답: {}", aiResponse);
+        return new AnalysisResponse("분석 실패", "오류", "AI 응답 형식에 문제가 있습니다.");
     }
 }

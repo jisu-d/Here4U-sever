@@ -1,8 +1,8 @@
 package com.example.demo5.service;
 
+import com.example.demo5.dto.analysis.AnalysisResponse;
 import com.example.demo5.dto.call.CreateCallResponse;
 import com.example.demo5.dto.member.CreateMemberRequest;
-import com.example.demo5.dto.member.MemberKeywordResponse;
 import com.example.demo5.dto.member.MemberResponse;
 import com.example.demo5.dto.member.MemberStatusTagResponse;
 import com.example.demo5.dto.schedule.CreateScheduleResponse;
@@ -18,6 +18,8 @@ import com.example.demo5.repository.CallScheduleRepository;
 import com.example.demo5.repository.MemberKeywordRepository;
 import com.example.demo5.repository.MemberRepository;
 import com.example.demo5.repository.MemberStatusRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +41,9 @@ public class MemberService {
     private final CallLogRepository callLogRepository;
     private final CallScheduleRepository callScheduleRepository;
     private final TwilioService twilioService;
-    private final ConversationSummaryService conversationSummaryService; // New
+    private final ConversationSummaryService conversationSummaryService;
+    private final ObjectMapper objectMapper;
+
     private static final SecureRandom random = new SecureRandom();
     private static final Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
 
@@ -75,10 +79,23 @@ public class MemberService {
     }
 
     @Transactional(readOnly = true)
-    public MemberKeywordResponse getMemberKeyword(String memberId) {
+    public AnalysisResponse getMemberAnalysis(String memberId) {
         MemberKeyword memberKeyword = memberKeywordRepository.findByMember_MemberId(memberId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 회원 키워드를 찾을 수 없습니다: " + memberId));
-        return new MemberKeywordResponse(memberKeyword);
+                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 회원 키워드 정보를 찾을 수 없습니다: " + memberId));
+
+        String analysisJson = memberKeyword.getKeyword();
+
+        if (analysisJson == null || analysisJson.trim().isEmpty() || analysisJson.equals("[]")) {
+            log.warn("회원 ID {}에 대한 분석 데이터가 비어있습니다.", memberId);
+            return new AnalysisResponse("분석 데이터 없음", "정보 없음", "아직 분석된 대화 내용이 없습니다.");
+        }
+
+        try {
+            return objectMapper.readValue(analysisJson, AnalysisResponse.class);
+        } catch (JsonProcessingException e) {
+            log.error("DB의 분석 데이터를 파싱하는 데 실패했습니다. memberId: {}, data: {}", memberId, analysisJson, e);
+            return new AnalysisResponse("데이터 파싱 오류", "오류", "저장된 분석 데이터를 읽는 중 문제가 발생했습니다.");
+        }
     }
 
     @Transactional(readOnly = true)

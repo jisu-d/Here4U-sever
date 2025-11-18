@@ -103,20 +103,22 @@
     *   `404 Not Found`: 해당 ID의 스케줄을 찾을 수 없음
     *   `403 Forbidden`: 해당 스케줄을 변경할 권한이 없음
 
-### 1.5. 회원 관심 키워드 조회
-*   **엔드포인트**: `GET /api/members/{memberId}/keyword`
-*   **설명**: 특정 회원의 관심 키워드 목록을 조회합니다.
+### 1.5. 회원 대화 분석 (키워드, 감정, 피드백)
+*   **엔드포인트**: `GET /api/members/{memberId}/analysis`
+*   **설명**: 특정 회원의 최근 대화 내용을 AI로 분석하여 주요 키워드, 감정, 피드백을 종합적으로 제공합니다.
 *   **경로 변수**:
-    *   `memberId` (string): 키워드를 조회할 회원의 ID
-*   **응답 바디**: `MemberKeywordResponse`
+    *   `memberId` (string): 분석할 회원의 ID
+*   **응답 바디**: `AnalysisResponse`
     ```json
     {
-      "memberKeyword": ["외로움", "산책", "음식"]
+      "keywords": "피자 치킨 고기 친구",
+      "currentMood": "긍정적",
+      "feedback": "오늘은 활력이 높아요"
     }
     ```
 *   **상태 코드**:
-    *   `200 OK`: 키워드 조회 성공
-    *   `404 Not Found`: 해당 ID의 회원 키워드를 찾을 수 없음
+    *   `200 OK`: 분석 성공
+    *   `404 Not Found`: 해당 ID의 회원을 찾을 수 없음
 
 ### 1.6. 회원 상태 태그 조회
 *   **엔드포인트**: `GET /api/members/{memberId}/status`

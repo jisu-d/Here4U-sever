@@ -1,8 +1,8 @@
 package com.example.demo5.controller;
 
+import com.example.demo5.dto.analysis.AnalysisResponse;
 import com.example.demo5.dto.call.CreateCallResponse;
 import com.example.demo5.dto.member.CreateMemberRequest;
-import com.example.demo5.dto.member.MemberKeywordResponse;
 import com.example.demo5.dto.member.MemberResponse;
 import com.example.demo5.dto.member.ConversationSummaryResponse;
 import com.example.demo5.dto.member.MemberStatusTagResponse;
@@ -80,14 +80,14 @@ public class MemberController {
     }
 
     /**
-     * 5. 회원 관심 키워드 조회 API
-     * [GET] /api/members/{memberId}/keyword
+     * 5. 회원 대화 분석 (키워드, 감정, 피드백) API
+     * [GET] /api/members/{memberId}/analysis
      */
-    @GetMapping("/{memberId}/keyword")
-    public ResponseEntity<MemberKeywordResponse> getMemberKeyword(
+    @GetMapping("/{memberId}/analysis")
+    public ResponseEntity<AnalysisResponse> getMemberAnalysis(
             @PathVariable String memberId
     ) {
-        MemberKeywordResponse response = memberService.getMemberKeyword(memberId);
+        AnalysisResponse response = memberService.getMemberAnalysis(memberId);
         return ResponseEntity.ok(response);
     }
 
