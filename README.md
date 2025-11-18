@@ -151,5 +151,22 @@
     *   `200 OK`: 요약 조회 성공
     *   `404 Not Found`: 해당 ID의 회원을 찾을 수 없음
 
+### 1.8. 최근 자동 안부 통화 상태 조회
+*   **엔드포인트**: `GET /api/members/{memberId}/latest-auto-call`
+*   **설명**: 특정 회원의 가장 최근의 '자동' 안부 통화 상태와 시간을 조회합니다.
+*   **경로 변수**:
+    *   `memberId` (string): 조회할 회원의 ID
+*   **응답 바디**: `LatestCallStatusResponse`
+    *   `status`는 "완료", "부재중", "기록 없음" 중 하나의 값을 가집니다.
+    ```json
+    {
+      "status": "완료",
+      "time": "10:20"
+    }
+    ```
+*   **상태 코드**:
+    *   `200 OK`: 조회 성공
+    *   `404 Not Found`: 해당 ID의 회원을 찾을 수 없음
+
 
 

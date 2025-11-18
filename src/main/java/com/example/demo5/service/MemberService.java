@@ -2,6 +2,7 @@ package com.example.demo5.service;
 
 import com.example.demo5.dto.analysis.AnalysisResponse;
 import com.example.demo5.dto.call.CreateCallResponse;
+import com.example.demo5.dto.call.LatestCallStatusResponse;
 import com.example.demo5.dto.member.CreateMemberRequest;
 import com.example.demo5.dto.member.MemberResponse;
 import com.example.demo5.dto.member.MemberStatusTagResponse;
@@ -28,7 +29,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -111,6 +114,21 @@ public class MemberService {
                 .orElseThrow(() -> new EntityNotFoundException("해당 ID의 회원을 찾을 수 없습니다: " + memberId));
 
         return conversationSummaryService.getConversationSummary(memberId);
+    }
+
+    @Transactional(readOnly = true)
+    public LatestCallStatusResponse getLatestAutoCallStatus(String memberId) {
+        Optional<CallLog> latestAutoCall = callLogRepository.findTopByMember_MemberIdAndCallTypeOrderByRequestedAtDesc(memberId, CallLog.CallType.AUTO);
+
+        if (latestAutoCall.isEmpty()) {
+            return new LatestCallStatusResponse("기록 없음", "");
+        }
+
+        CallLog callLog = latestAutoCall.get();
+        String status = callLog.getStatus() == CallLog.CallStatus.COMPLETED ? "완료" : "부재중";
+        String time = callLog.getRequestedAt().format(DateTimeFormatter.ofPattern("HH:mm"));
+
+        return new LatestCallStatusResponse(status, time);
     }
 
     @Transactional

@@ -2,6 +2,7 @@ package com.example.demo5.controller;
 
 import com.example.demo5.dto.analysis.AnalysisResponse;
 import com.example.demo5.dto.call.CreateCallResponse;
+import com.example.demo5.dto.call.LatestCallStatusResponse;
 import com.example.demo5.dto.member.CreateMemberRequest;
 import com.example.demo5.dto.member.MemberResponse;
 import com.example.demo5.dto.member.ConversationSummaryResponse;
@@ -113,6 +114,18 @@ public class MemberController {
     ) {
         String summary = memberService.getConversationSummary(memberId);
         ConversationSummaryResponse response = new ConversationSummaryResponse(summary);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 8. 최근 자동 안부 통화 상태 조회 API
+     * [GET] /api/members/{memberId}/latest-auto-call
+     */
+    @GetMapping("/{memberId}/latest-auto-call")
+    public ResponseEntity<LatestCallStatusResponse> getLatestAutoCallStatus(
+            @PathVariable String memberId
+    ) {
+        LatestCallStatusResponse response = memberService.getLatestAutoCallStatus(memberId);
         return ResponseEntity.ok(response);
     }
 }

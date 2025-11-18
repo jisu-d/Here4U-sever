@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface CallLogRepository extends JpaRepository<CallLog, Long> {
     Optional<CallLog> findByCallSid(String callSid);
     List<CallLog> findByMember_MemberIdAndRequestedAtBetween(String memberId, LocalDateTime start, LocalDateTime end);
+    Optional<CallLog> findTopByMember_MemberIdAndCallTypeOrderByRequestedAtDesc(String memberId, CallLog.CallType callType);
 }
