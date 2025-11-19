@@ -200,5 +200,32 @@
     *   `200 OK`: 조회 성공
     *   `404 Not Found`: 해당 ID의 회원을 찾을 수 없음
 
+## 2. AI 관련 API (`/api/ai`)
+
+### 2.1. AI 대화 주제 추천
+*   **엔드포인트**: `GET /api/ai/recommend-topics`
+*   **설명**: AI가 일상적인 대화 주제 3가지를 추천합니다.
+*   **요청 바디**: 없음
+*   **응답 바디**: `List<TopicRecommendationResponse>`
+    ```json
+    [
+      {
+        "mainKeyword": "취미",
+        "subTopic": "요즘 새롭게 빠져있는 취미가 있나요?"
+      },
+      {
+        "mainKeyword": "음식",
+        "subTopic": "최근에 가장 맛있게 먹었던 음식은 무엇인가요?"
+      },
+      {
+        "mainKeyword": "일상",
+        "subTopic": "오늘 하루 중 가장 즐거웠던 순간은 언제였나요?"
+      }
+    ]
+    ```
+*   **상태 코드**:
+    *   `200 OK`: 추천 성공
+    *   `500 Internal Server Error`: AI 서버 또는 내부 로직 오류
+
 
 
