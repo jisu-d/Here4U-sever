@@ -57,6 +57,19 @@ public class MemberController {
     }
 
     /**
+     * 2-1. 맞춤 주제로 전화 걸기 API
+     * [POST] /api/members/{memberId}/custom-calls
+     */
+    @PostMapping("/{memberId}/custom-calls")
+    public ResponseEntity<CreateCallResponse> makeCustomCall(
+            @PathVariable String memberId,
+            @RequestBody com.example.demo5.dto.call.CustomCallRequest request
+    ) {
+        CreateCallResponse response = memberService.initiateCustomCall(memberId, request.getTopic(), baseUrl);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * 3. 자동 전화 스케줄 등록 API
      * [POST] /api/members/{memberId}/schedules
      */

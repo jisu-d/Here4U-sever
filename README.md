@@ -27,7 +27,7 @@
 
 ### 1.2. 수동 전화 걸기
 *   **엔드포인트**: `POST /api/members/{memberId}/calls`
-*   **설명**: 특정 회원에게 수동으로 전화를 겁니다.
+*   **설명**: 특정 회원에게 "안녕하세요. 히어유입니다. 오늘 하루는 어떠셨나요?" 라는 기본 질문으로 전화를 겁니다.
 *   **경로 변수**:
     *   `memberId` (string): 전화를 걸 회원의 ID
 *   **요청 바디**: 없음
@@ -43,7 +43,29 @@
     *   `200 OK`: 통화 시작 요청 성공
     *   `404 Not Found`: 해당 ID의 회원을 찾을 수 없음
 
-### 1.3. 자동 전화 스케줄 등록
+### 1.3. 맞춤 주제로 전화 걸기
+*   **엔드포인트**: `POST /api/members/{memberId}/custom-calls`
+*   **설명**: 사용자가 제공한 주제를 AI가 자연스러운 질문으로 변환하여 특정 회원에게 전화를 겁니다.
+*   **경로 변수**:
+    *   `memberId` (string): 전화를 걸 회원의 ID
+*   **요청 바디**: `CustomCallRequest`
+    ```json
+    {
+      "topic": "최근에 본 영화와 그 영화에 대한 개인적인 감상"
+    }
+    ```
+*   **응답 바디**: `CreateCallResponse`
+    ```json
+    {
+      "callLogId": 2,
+      "status": "QUEUED"
+    }
+    ```
+*   **상태 코드**:
+    *   `200 OK`: 통화 시작 요청 성공
+    *   `404 Not Found`: 해당 ID의 회원을 찾을 수 없음
+
+### 1.4. 자동 전화 스케줄 등록
 *   **엔드포인트**: `POST /api/members/{memberId}/schedules`
 *   **설명**: 특정 회원에 대한 자동 전화 스케줄을 등록합니다.
     *   `frequency`는 `DAILY`, `WEEKLY`, `MONTHLY` 중 하나의 값을 가집니다.

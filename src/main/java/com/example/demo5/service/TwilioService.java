@@ -33,17 +33,24 @@ public class TwilioService {
 
     public String makeCall(String to, String ngrokUrl) {
         String voiceUrl = ngrokUrl + "/api/twilio/call/welcome";
+        return makeCall(to, ngrokUrl, voiceUrl);
+    }
+
+    /**
+     * 맞춤 Welcome URL로 전화를 겁니다. (새로운 맞춤 전화용)
+     */
+    public String makeCall(String to, String ngrokUrl, String customWelcomeUrl) {
         String statusCallbackUrl = ngrokUrl + "/api/twilio/call/status"; // 상태 콜백 URL 추가
 
         Call call = Call.creator(
-                new PhoneNumber(to),
-                new PhoneNumber(twilioPhoneNumber),
-                URI.create(voiceUrl)
-        )
-        .setStatusCallback(URI.create(statusCallbackUrl)) // 상태 콜백 URL 설정
-        .setStatusCallbackMethod(com.twilio.http.HttpMethod.POST) // POST 메소드 사용
-        .setStatusCallbackEvent(List.of("completed", "failed", "canceled", "no-answer")) // 종료 이벤트 지정
-        .create();
+                        new PhoneNumber(to),
+                        new PhoneNumber(twilioPhoneNumber),
+                        URI.create(customWelcomeUrl) // 맞춤 URL 사용
+                )
+                .setStatusCallback(URI.create(statusCallbackUrl)) // 상태 콜백 URL 설정
+                .setStatusCallbackMethod(com.twilio.http.HttpMethod.POST) // POST 메소드 사용
+                .setStatusCallbackEvent(List.of("completed", "failed", "canceled", "no-answer")) // 종료 이벤트 지정
+                .create();
 
         return call.getSid();
     }

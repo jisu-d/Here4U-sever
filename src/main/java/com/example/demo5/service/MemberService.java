@@ -48,6 +48,7 @@ public class MemberService {
     private final CallScheduleRepository callScheduleRepository;
     private final TwilioService twilioService;
     private final ConversationSummaryService conversationSummaryService;
+    private final QuestionGenerationService questionGenerationService; // 의존성 추가
     private final ObjectMapper objectMapper;
 
     private static final SecureRandom random = new SecureRandom();
@@ -155,7 +156,28 @@ public class MemberService {
     public CreateCallResponse initiateManualCall(String memberId, String baseUrl) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new EntityNotFoundException("해당 ID의 회원을 찾을 수 없습니다: " + memberId));
-        return initiateCall(member, CallLog.CallType.MANUAL, baseUrl);
+        return initiateCall(member, CallLog.CallType.MANUAL, baseUrl, null);
+    }
+
+    @Transactional
+    public CreateCallResponse initiateCustomCall(String memberId, String topic, String baseUrl) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 회원을 찾을 수 없습니다: " + memberId));
+
+        // 1. AI를 통해 주제를 질문으로 변환
+        String generatedQuestion = questionGenerationService.generateQuestionFromTopic(topic);
+
+        // 2. 생성된 질문을 포함한 맞춤 URL 생성
+        String customWelcomeUrl;
+        try {
+            String encodedQuestion = java.net.URLEncoder.encode(generatedQuestion, java.nio.charset.StandardCharsets.UTF_8.toString());
+            customWelcomeUrl = baseUrl + "/api/twilio/call/custom-welcome?question=" + encodedQuestion;
+        } catch (java.io.UnsupportedEncodingException e) {
+            throw new RuntimeException("URL 인코딩 실패", e);
+        }
+
+        // 3. 맞춤 URL로 전화 걸기
+        return initiateCall(member, CallLog.CallType.MANUAL, baseUrl, customWelcomeUrl);
     }
 
     @Async("taskExecutor")
@@ -167,10 +189,10 @@ public class MemberService {
                 Thread.currentThread().getName(),
                 schedule.getScheduleId(),
                 schedule.getMember().getMemberId());
-        initiateCall(schedule.getMember(), CallLog.CallType.AUTO, baseUrl);
+        initiateCall(schedule.getMember(), CallLog.CallType.AUTO, baseUrl, null);
     }
 
-    private CreateCallResponse initiateCall(Member member, CallLog.CallType callType, String baseUrl) {
+    private CreateCallResponse initiateCall(Member member, CallLog.CallType callType, String baseUrl, String customWelcomeUrl) {
         CallLog callLog = CallLog.builder()
                 .member(member)
                 .callType(callType)
@@ -179,7 +201,14 @@ public class MemberService {
         CallLog savedCallLog = callLogRepository.save(callLog);
 
         String formattedPhoneNumber = formatPhoneNumber(member.getPhoneNumber());
-        String callSid = twilioService.makeCall(formattedPhoneNumber, baseUrl);
+
+        String callSid;
+        if (customWelcomeUrl != null) {
+            callSid = twilioService.makeCall(formattedPhoneNumber, baseUrl, customWelcomeUrl);
+        } else {
+            callSid = twilioService.makeCall(formattedPhoneNumber, baseUrl);
+        }
+
         savedCallLog.setCallSid(callSid);
         callLogRepository.save(savedCallLog); // callSid 저장
 
