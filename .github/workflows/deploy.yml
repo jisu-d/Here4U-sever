@@ -1,9 +1,9 @@
 name: Java CI/CD with Gradle and Docker
 
 # 1. 실행 조건: main 브랜치에 push가 발생했을 때
-on:
-  push:
-    branches: [ "main" ]
+#on:
+#  push:
+#    branches: [ "main" ]
 
 jobs:
   build-and-deploy:
