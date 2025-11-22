@@ -76,7 +76,7 @@
     {
       "startDate": "2025-11-15",
       "frequency": "WEEKLY",
-      "callTime": "19:00:00",
+      "callTime": "19:00:00", 
       "isActive": true
     }
     ```
